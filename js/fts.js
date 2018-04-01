@@ -8,6 +8,8 @@ var mouseX = null, mouseY = null;
 var mode = "normal";
 var selected = null;
 
+var paused = false;
+
 //amends two arrays into one array with the items of both arrays
 function joinArr (a, b) {
 	var c =[]
@@ -258,12 +260,25 @@ function draw() {
 	ctx.fillRect(0, 0, 1000, 600);
 	
 	ship.draw();
-	ship.update();
+	if (!paused) ship.update();
+	
+	if (paused) {
+		ctx.fillStyle = "rgba(0,0,0,0.4)";
+		ctx.fillRect(0, 0, 1000, 250);
+		ctx.fillRect(0, 250, 465, 100);
+		ctx.fillRect(490, 250, 20, 100);
+		ctx.fillRect(535, 250, 465, 100);
+		ctx.fillRect(0, 350, 1000, 250);
+		ctx.fillStyle = "rgba(255,255,255,0.4)";
+		ctx.fillRect(465, 250, 25, 100);
+		ctx.fillRect(510, 250, 25, 100);
+	}
 	
 	if (mode == "normal") ctx.fillStyle = "#000";
 	if (mode == "move") ctx.fillStyle = "#f0f";
 	ctx.fillRect(mouseX - 2, mouseY - 6, 4, 12);
 	ctx.fillRect(mouseX - 6, mouseY - 2, 12, 4);
+	
 }
 
 //IO
@@ -311,4 +326,12 @@ document.onmousedown = function(e) {
 			}
 		}
 	}
+}
+
+document.onkeydown = function(e) {
+    e = window.event || e;
+    var key = e.keyCode;
+    e.preventDefault();
+    
+    if (key === 32) paused = !paused;
 }
