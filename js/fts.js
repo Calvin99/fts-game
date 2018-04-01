@@ -105,6 +105,7 @@ CrewMember.prototype.update = function() {
 	}
 }
 
+//displays player controlled crew members
 CrewMember.prototype.draw = function() {
 	ctx.fillStyle = "#f00";
 	ctx.fillRect(this.x - this.w / 2, this.y - this.h / 2, this.w, this.h);
@@ -129,6 +130,7 @@ function Square (x, y, id, blacklist) {
 	this.blacklist = blacklist || [];
 }
 
+//displays individual squares
 Square.prototype.draw = function () {
 	ctx.fillStyle = "#aaa";
 	ctx.fillRect(this.x - this.w / 2 - 1, this.y - this.h / 2 - 1, this.w + 2, this.h + 2);
@@ -146,6 +148,7 @@ function Ship (id, grid, crew) {
 	this.crew = crew;
 }
 
+//displays entire ship and contents
 Ship.prototype.draw = function () {
 	for (r = 0; r < this.grid.length; r++) {
 		this.grid[r].draw();
@@ -155,6 +158,7 @@ Ship.prototype.draw = function () {
 	}
 }
 
+//updates ship's contents
 Ship.prototype.update = function () {
 	for (c = 0; c < this.crew.length; c++) {
 		this.crew[c].update();
@@ -201,7 +205,6 @@ var grid = [new Square(60, 60, "a1"), new Square(100, 60, "b1"), new Square(140,
 
 var ship = new Ship("test", grid, [new CrewMember(60, 60, "a1")]);
 ship.path();
-//console.log(ship);
 
 
 //DRAW
