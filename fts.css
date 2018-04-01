@@ -3,3 +3,7 @@ body {
 	color: #fff;
 	font-family: Aldrich;
 }
+
+canvas {
+    cursor: none;
+}

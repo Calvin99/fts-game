@@ -3,6 +3,11 @@ var ctx = canvas.getContext("2d");
 
 console.clear();
 
+var mouseX = null, mouseY = null;
+
+var mode = "normal";
+var selected = null;
+
 //amends two arrays into one array with the items of both arrays
 function joinArr (a, b) {
 	var c =[]
@@ -22,12 +27,14 @@ function joinArr (a, b) {
 
 //CREW MEMBER
 //player controlled crew members
-function CrewMember (x, y, location) {
+function CrewMember (x, y, location, color) {
 	this.x = x;
 	this.y = y;
 	
 	this.w = 15;
 	this.h = 25;
+	
+	this.color = color || "red";
 	
 	this.goal = null;
 	this.xgoal = null;
@@ -39,7 +46,8 @@ function CrewMember (x, y, location) {
 	
 	this.location = location;
 	
-	this.spd = 2;
+	this.xspd = 4;
+	this.yspd = 2;
 	
 	this.hp = 100;
 	
@@ -67,7 +75,7 @@ CrewMember.prototype.update = function() {
 		//sets next target square
 		if (this.location == this.target) {
 			this.target = null;
-			for (r = 0; r < ship.grid.length; r++) {
+			/*for (r = 0; r < ship.grid.length; r++) {
 				if (ship.grid[r].id == location) {
 					var i = 0;
 					while (target = null) {
@@ -88,26 +96,45 @@ CrewMember.prototype.update = function() {
 					}
 					break;
 				}
+			}*/
+			for (s = 0; s < ship.grid.length; s++) {
+				if (ship.grid[s].id == this.location) {
+					var i = 0
+					while (this.target == null) {
+						for (p = 0; p < ship.grid.length; p++) {
+							if (p != s && ship.grid[s].connections[0].indexOf(ship.grid[p].id) >= 0 && (ship.grid[p].connections[i].indexOf(this.goal) >= 0 || ship.grid[p].id == this.goal) && ship.grid[s].blacklist.indexOf(ship.grid[p].id) < 0) {
+								this.target = ship.grid[p].id;
+								this.xtarget = ship.grid[p].x;
+								this.ytarget = ship.grid[p].y;
+								break;
+							}
+						}
+						i++;
+					}
+				}
 			}
 		}
 		
 		//updates location of the crew member
-		if (this.x > this.xtarget) this.x -= this.spd;
-		if (this.x < this.xtarget) this.x += this.spd;
-		if (this.y > this.ytarget) this.y -= this.spd;
-		if (this.y < this.ytarget) this.y += this.spd;
+		if (this.x > this.xtarget) this.x -= this.xspd;
+		if (this.x < this.xtarget) this.x += this.xspd;
+		if (this.y > this.ytarget) this.y -= this.yspd;
+		if (this.y < this.ytarget) this.y += this.yspd;
 		
 		//checks if arrived at target location
-		if (this.x == this.xtarget && this.y == this.ytarget) {
-			this.location = this.target;
-			
+		if (this.x == this.xtarget && this.y == this.ytarget) this.location = this.target;
+		
+		if (this.location == this.goal) {
+			this.goal = null;
+			this.xgoal = null;
+			this.ygoal = null;
 		}
 	}
 }
 
 //displays player controlled crew members
 CrewMember.prototype.draw = function() {
-	ctx.fillStyle = "#f00";
+	ctx.fillStyle = this.color;
 	ctx.fillRect(this.x - this.w / 2, this.y - this.h / 2, this.w, this.h);
 }
 
@@ -136,6 +163,12 @@ Square.prototype.draw = function () {
 	ctx.fillRect(this.x - this.w / 2 - 1, this.y - this.h / 2 - 1, this.w + 2, this.h + 2);
 	ctx.fillStyle = "#666";
 	ctx.fillRect(this.x - this.w / 2 + 1, this.y - this.h / 2 + 1, this.w - 2, this.h - 2);
+	for (c = 0; c < ship.crew.length; c++) {
+		if (ship.crew[c].goal == this.id) {
+			ctx.fillStyle = "rgba(0,255,0,0.125)";
+			ctx.fillRect(this.x - this.w / 2 - 1, this.y - this.h / 2 - 1, this.w + 2, this.h + 2);
+		}
+	}
 }
 
 
@@ -167,13 +200,15 @@ Ship.prototype.update = function () {
 
 //denotes connections between each square and how far it is from every other square
 Ship.prototype.path = function () {
-	for (r = 0; r < this.grid.length; r++) {
+	//sets up all initial connections to adjacent squares
+	for (s = 0; s < this.grid.length; s++) {
 		for (p = 0; p < this.grid.length; p++) {
-			if (r != p && Math.pow(Math.pow(this.grid[r].x - this.grid[p].x, 2) + Math.pow(this.grid[r].y - this.grid[p].y, 2), 0.5) < 45 && this.grid[r].blacklist.indexOf(this.grid[p].id) == -1) {
-				this.grid[r].connections[0][this.grid[r].connections[0].length] = this.grid[p].id;
+			if (s != p && Math.pow(Math.pow(this.grid[s].x - this.grid[p].x, 2) + Math.pow(this.grid[s].y - this.grid[p].y, 2), 0.5) < 45 && this.grid[s].blacklist.indexOf(this.grid[p].id) == -1) {
+				this.grid[s].connections[0][this.grid[s].connections[0].length] = this.grid[p].id;
 			}
 		}
 	}
+	//sets up secondary and on connections
 	var i = 0;
 	var worthwhile = true;
 	while (worthwhile) {
@@ -182,7 +217,7 @@ Ship.prototype.path = function () {
 			this.grid[r].connections[i+1] = [];
 			for (p = 0; p < this.grid.length; p++) {
 				if(this.grid[r].connections[i].indexOf(this.grid[p].id) >= 0) {
-					this.grid[r].connections[i+1] = joinArr(this.grid[r].connections[i+1], this.grid[p].connections[i]);
+					this.grid[r].connections[i+1] = joinArr(this.grid[r].connections[i+1], this.grid[p].connections[0]);
 				}
 			}
 			for (n = this.grid[r].connections[i+1].length - 1; n >= 0; n--) {
@@ -201,9 +236,17 @@ Ship.prototype.path = function () {
 	}
 }
 
-var grid = [new Square(60, 60, "a1"), new Square(100, 60, "b1"), new Square(140, 60, "c1"), new Square(180, 60, "d1"), new Square(220, 60, "e1"), new Square(60, 100, "a2"), new Square(220, 100, "e2"), new Square(60, 140, "a3"), new Square(100, 140, "b3"), new Square(140, 140, "c3"), new Square(180, 140, "d3"), new Square(220, 140, "e3")];
+var labels = ["a", "b", "c", "d", "e", "f", "g", "h"];
 
-var ship = new Ship("test", grid, [new CrewMember(60, 60, "a1")]);
+var grid = [];//[new Square(60, 60, "a1"), new Square(100, 60, "b1"), new Square(140, 60, "c1"), new Square(180, 60, "d1"), new Square(220, 60, "e1"), new Square(60, 100, "a2"), new Square(220, 100, "e2"), new Square(60, 140, "a3"), new Square(100, 140, "b3"), new Square(140, 140, "c3"), new Square(180, 140, "d3"), new Square(220, 140, "e3")];
+
+for (i = 0; i < 7; i++) {
+	for (j = 0 + (i%2)*2; j < 8; j += 1 + (i%2)*2) {
+		grid[grid.length] = new Square(60 + 40 * j, 60 + 40 * i, labels[j]+(i+1));
+	}	
+}
+
+var ship = new Ship("test", grid, [new CrewMember(60, 60, "a1", "cyan"), new CrewMember(100, 60, "b1")]);
 ship.path();
 
 
@@ -213,6 +256,59 @@ setInterval(draw, 50);
 function draw() {
 	ctx.fillStyle = "#005";
 	ctx.fillRect(0, 0, 1000, 600);
+	
 	ship.draw();
 	ship.update();
+	
+	if (mode == "normal") ctx.fillStyle = "#000";
+	if (mode == "move") ctx.fillStyle = "#f0f";
+	ctx.fillRect(mouseX - 2, mouseY - 6, 4, 12);
+	ctx.fillRect(mouseX - 6, mouseY - 2, 12, 4);
+}
+
+//IO
+document.onmousemove = function(e) {
+    e = window.event || e;
+	
+	//track location of mouse within canvas
+	rect = canvas.getBoundingClientRect();
+	mouseX = Math.round((e.clientX - rect.left));
+	mouseY = Math.round((e.clientY - rect.top));
+}
+
+document.onmousedown = function(e) {
+    e = window.event || e;
+	
+	//used to make sure one click only activates one action
+	var handled = false;
+	
+	if (mode == "normal") {
+		for (c = 0; c < ship.crew.length; c++) {
+			if (mouseX > ship.crew[c].x - ship.crew[c].w / 2 && mouseX < ship.crew[c].x + ship.crew[c].w / 2 && mouseY > ship.crew[c].y - ship.crew[c].h / 2 && mouseY < ship.crew[c].y + ship.crew[c].h / 2) {
+				mode = "move";
+				selected = c;
+				handled = true;
+			}
+		}
+	}
+	
+	if (mode == "move" && !handled) {
+		for (s = 0; s < ship.grid.length; s++) {
+			if (mouseX > ship.grid[s].x - ship.grid[s].w / 2 && mouseX < ship.grid[s].x + ship.grid[s].w / 2 && mouseY > ship.grid[s].y - ship.grid[s].h / 2 && mouseY < ship.grid[s].y + ship.grid[s].h / 2) {
+				var occupied = false;
+				for (c = 0; c < ship.crew.length; c++) {
+					if (c != selected && (ship.crew[c].location == ship.grid[s].id || ship.crew[c].goal == ship.grid[s].id)) {
+						occupied = true;
+						break;
+					}
+				}
+				if (!occupied) {
+					ship.crew[selected].goal = ship.grid[s].id;
+				}
+				mode = "normal";
+				handled = true;
+				break;
+			}
+		}
+	}
 }
