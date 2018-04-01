@@ -28,6 +28,8 @@ function joinArr (a, b) {
 
 
 //CREW MEMBER
+var names = ["Bob", "Joe", "Frank", "Anne", "Jill", "Carol"];
+
 //player controlled crew members
 function CrewMember (x, y, location, color) {
 	this.x = x;
@@ -51,6 +53,7 @@ function CrewMember (x, y, location, color) {
 	this.xspd = 4;
 	this.yspd = 2;
 	
+	this.name = names.splice(Math.floor(Math.random() * names.length), 1);
 	this.hp = 100;
 	
 	this.pilot = 0;
@@ -191,6 +194,26 @@ Ship.prototype.draw = function () {
 	for (c = 0; c < this.crew.length; c++) {
 		this.crew[c].draw();
 	}
+	
+	ctx.fillStyle = "rgba(50,50,50,0.75)";
+	ctx.fillRect(15, 50, 88, 35 + this.crew.length*30);
+	ctx.fillStyle = "white";
+	ctx.font="24px Aldrich";
+	ctx.fillText("CREW", 22, 77);
+	
+	for (c = 0; c < this.crew.length; c++) {
+		ctx.fillStyle = "rgba(0,0,0,0.75)";
+		ctx.fillRect(17, 85 + 30*c, 84, 28);
+		if (mode == "move" && c == selected) {
+			ctx.fillStyle = "rgba(0,255,0,0.25)";
+			ctx.fillRect(15, 83 + 30*c, 88, 32);
+		}
+		ctx.fillStyle = "white";
+		ctx.font="12px Aldrich";
+		ctx.fillText(this.crew[c].name, 50, 100 + 30*c);
+		ctx.fillStyle = this.crew[c].color;
+		ctx.fillRect(25, 92 + 30*c, this.crew[c].w / 2, this.crew[c].h / 2)
+	}
 }
 
 //updates ship's contents
@@ -244,11 +267,11 @@ var grid = [];//[new Square(60, 60, "a1"), new Square(100, 60, "b1"), new Square
 
 for (i = 0; i < 7; i++) {
 	for (j = 0 + (i%2)*2; j < 8; j += 1 + (i%2)*2) {
-		grid[grid.length] = new Square(60 + 40 * j, 60 + 40 * i, labels[j]+(i+1));
+		grid[grid.length] = new Square(210 + 40 * j, 60 + 40 * i, labels[j]+(i+1));
 	}	
 }
 
-var ship = new Ship("test", grid, [new CrewMember(60, 60, "a1", "cyan"), new CrewMember(100, 60, "b1")]);
+var ship = new Ship("test", grid, [new CrewMember(210, 60, "a1", "cyan"), new CrewMember(250, 60, "b1"), new CrewMember(290, 60, "c1", "yellow")]);
 ship.path();
 
 
