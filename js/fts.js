@@ -47,6 +47,8 @@ function CrewMember (x, y, location, color) {
 	this.xgoal = null;
 	this.ygoal = null;
 	
+	this.auto = false;
+	
 	this.target = location;
 	this.xtarget = x;
 	this.ytarget = y;
@@ -84,28 +86,6 @@ CrewMember.prototype.update = function() {
 		//sets next target square
 		if (this.location == this.target) {
 			this.target = null;
-			/*for (r = 0; r < ship.grid.length; r++) {
-				if (ship.grid[r].id == location) {
-					var i = 0;
-					while (target = null) {
-						for (p = 0; r < ship.grid.length; p++) {
-							if (ship.grid[r].connections[0].indexOf(ships.grid[p].id) >= 0 && ships.grid[p].connections[i].indexOf(goal) >=0) {
-								target = ships.grid[p].connections[i][ships.grid[p].connections[i].indexOf(goal)];
-								for (t = 0; t < ship.grid.length; t++) {
-									if (ship.grid[t].id == target) {
-										targetx = ship.grid[t].x;
-										targety = ship.grid[t].y;
-										break;
-									}
-								}
-								break;
-							}
-						}
-						i++;
-					}
-					break;
-				}
-			}*/
 			for (s = 0; s < ship.grid.length; s++) {
 				if (ship.grid[s].id == this.location) {
 					var i = 0
@@ -124,11 +104,20 @@ CrewMember.prototype.update = function() {
 			}
 		}
 		
+		var spdMod = 1;
+		for (s = 0; s < ship.grid.length; s++) {
+			if (ship.grid[s].id == this.location) {
+				if (ship.grid[s].water > 5) spdMod = 1 / 2;
+				if (ship.grid[s].water > 8) spdMod = 1 / 4;
+				break;
+			}
+		}
+		
 		//updates location of the crew member
-		if (this.x > this.xtarget) this.x -= this.xspd;
-		if (this.x < this.xtarget) this.x += this.xspd;
-		if (this.y > this.ytarget) this.y -= this.yspd;
-		if (this.y < this.ytarget) this.y += this.yspd;
+		if (this.x > this.xtarget) this.x -= this.xspd * spdMod;
+		if (this.x < this.xtarget) this.x += this.xspd * spdMod;
+		if (this.y > this.ytarget) this.y -= this.yspd * spdMod;
+		if (this.y < this.ytarget) this.y += this.yspd * spdMod;
 		
 		//checks if arrived at target location
 		if (this.x == this.xtarget && this.y == this.ytarget) this.location = this.target;
@@ -177,10 +166,52 @@ Square.prototype.draw = function () {
 	ctx.fillStyle = "#888";
 	ctx.fillRect(this.x - this.w / 2 + 1, this.y - this.h / 2 + 1, this.w - 2, this.h - 2);
 	for (c = 0; c < ship.crew.length; c++) {
-		if (ship.crew[c].goal == this.id) {
+		if (ship.crew[c].goal == this.id && !ship.crew[c].auto) {
 			ctx.fillStyle = "rgba(0,255,0,0.125)";
 			ctx.fillRect(this.x - this.w / 2 - 1, this.y - this.h / 2 - 1, this.w + 2, this.h + 2);
 			break;
+		}
+	}
+	ctx.fillStyle = "rgba(0, 0, 150,"+ this.water / 20 +")";
+	ctx.fillRect(this.x - this.w / 2 - 1, this.y - this.h / 2 - 1, this.w + 2, this.h + 2);
+}
+
+function canFlow (a, b) {
+	for (r = 0; r < ship.rooms.length; r++) {
+		if (ship.rooms[r].squares.indexOf(a) >= 0 && ship.rooms[r].squares.indexOf(b) >= 0) return true;
+	}
+	for (d = 0; d < ship.doors.length; d++) {
+		if (ship.doors[d].connections.indexOf(a) >= 0 && ship.doors[d].connections.indexOf(b) >= 0 && ship.doors[d].open) return true;
+	}
+	return false;
+}
+
+function flow() {
+	var sum = [];
+	for (s = 0; s < ship.grid.length; s++) {	
+		sum[s] = [];
+		sum[s][0] = ship.grid[s].water;	
+		sum[s][1] = 1;
+		for (f = 0; f < ship.grid.length; f++) {
+			if (ship.grid[s].connections[0].indexOf(ship.grid[f].id) >= 0 && canFlow(ship.grid[s].id, ship.grid[f].id)) {
+				sum[s][0] += ship.grid[f].water;
+				sum[s][1] ++;
+			}
+		}
+	}
+	for (s = 0; s < ship.grid.length; s++) {
+		ship.grid[s].water = sum[s][0] / sum[s][1];
+	}
+	var fillSquare = [1,0];
+	for (d = 0; d < ship.doors.length; d++) {
+		if (ship.doors[d].connections.indexOf(null) >= 0 && ship.doors[d].open) {
+			for (s = 0; s < ship.grid.length; s++) {
+				if (ship.grid[s].id == ship.doors[d].connections[fillSquare[ship.doors[d].connections.indexOf(null)]]) {
+					if(ship.grid[s].water < 10) ship.grid[s].water++;
+					if(ship.grid[s].water > 10) ship.grid[s].water = 10;
+					break;
+				}
+			}
 		}
 	}
 }
@@ -196,19 +227,46 @@ function Room (x, y, w, h, id, squares, system) {
 	
 	this.id = id;
 	
+	this.hp = 100;
+	
+	this.power = 0;
+	this.powerMax = 0;
+	
+	this.manned = false;
+	
 	this.squares = squares || [];
 	
 	this.system = system || null;
 }
 
+Room.prototype.update = function () {
+	this.manned = false;
+	for (c = 0; c < ship.crew.length; c++) {
+		if (ship.crew[c].location == this.squares[0] && ship.crew[c].target == this.squares[0]) {
+			this.manned = true;
+			break;
+		}
+	}
+	if (this.system == "drain") {
+		for (s = 0; s < ship.grid.length; s++) {
+			if (ship.grid[s].water > 0) ship.grid[s].water -= 0.01;
+			if (ship.grid[s].water < 0) ship.grid[s].water = 0;
+		}
+	}	
+}
+
 Room.prototype.draw = function () {
 	ctx.fillStyle = "white";
+	ctx.strokeStyle = "white";
 	ctx.fillRect(this.x - this.w / 2 - 2, this.y - this.h / 2 - 2, this.w + 4, 4);
 	ctx.fillRect(this.x - this.w / 2 - 2, this.y + this.h / 2 - 2, this.w + 4, 4);
 	ctx.fillRect(this.x - this.w / 2 - 2, this.y - this.h / 2 - 2, 4, this.h + 4);
 	ctx.fillRect(this.x + this.w / 2 - 2, this.y - this.h / 2 - 2, 4, this.h + 4);
+	if (this.manned) {
+		ctx.fillStyle = "#afa";
+		ctx.strokeStyle = "#afa";
+	}
 	if (this.system == "pilot") {
-		ctx.strokeStyle = "white";
 		ctx.lineWidth = 2;
 		ctx.beginPath();
     	ctx.arc(this.x, this.y, 7, 0, 2 * Math.PI, false);
@@ -222,7 +280,6 @@ Room.prototype.draw = function () {
     	}
 	}
 	else if (this.system == "sonar") {
-		ctx.strokeStyle = "white";
 		ctx.lineWidth = 1;
 		ctx.beginPath();
     	ctx.arc(this.x, this.y, 3, 0, 2 * Math.PI, false);
@@ -240,7 +297,6 @@ Room.prototype.draw = function () {
 		ctx.stroke();
 	}
 	else if (this.system == "medbay") {
-		ctx.strokeStyle = "white";
 		ctx.lineWidth = 6;
 		ctx.beginPath();
 		ctx.moveTo(this.x - 8, this.y);
@@ -253,7 +309,6 @@ Room.prototype.draw = function () {
 	
 	}
 	else if (this.system == "doors") {
-		ctx.strokeStyle = "white";
 		ctx.lineWidth = 6;
 		ctx.beginPath();
 		ctx.moveTo(this.x - 4, this.y - 8);
@@ -266,7 +321,6 @@ Room.prototype.draw = function () {
 	
 	}
 	else if (this.system == "weapons") {
-		ctx.strokeStyle = "white";
 		ctx.lineWidth = 4;
 		ctx.beginPath();
 		ctx.moveTo(this.x - 8, this.y - 5);
@@ -297,21 +351,19 @@ Room.prototype.draw = function () {
 	
 	}
 	else if (this.system == "drain") {
-		ctx.strokeStyle = "white";
 		ctx.lineWidth = 2;
 		ctx.beginPath();
-    	ctx.arc(this.x, this.y, 7, 0, 2 * Math.PI, false);
+    	ctx.arc(this.x, this.y, 8, 0, 2 * Math.PI, false);
     	ctx.stroke();
     	for (p = -1; p < 2; p++) {
 			ctx.beginPath();
-			ctx.moveTo(this.x + Math.cos(Math.PI * p / 6) * 7, this.y + Math.sin(Math.PI * p / 6) * 7);
-			ctx.lineTo(this.x - Math.cos(Math.PI * p / 6) * 7, this.y + Math.sin(Math.PI * p / 6) * 7);
+			ctx.moveTo(this.x + Math.cos(Math.PI * p / 6) * 8, this.y + Math.sin(Math.PI * p / 6) * 8);
+			ctx.lineTo(this.x - Math.cos(Math.PI * p / 6) * 8, this.y + Math.sin(Math.PI * p / 6) * 8);
 			ctx.stroke();
     		
     	}
 	}
 	else if (this.system == "engine") {
-		ctx.strokeStyle = "white";
 		ctx.lineWidth = 3;
 		for (p = 0; p < 5; p += 2) {
 			ctx.beginPath();
@@ -398,11 +450,17 @@ function Ship (id, grid, rooms, crew, doors) {
 
 //updates ship's contents
 Ship.prototype.update = function () {
-	for (c = 0; c < this.crew.length; c++) {
-		this.crew[c].update();
-	}
 	for (d = 0; d < this.doors.length; d++) {
 		this.doors[d].update();
+	}
+	if (!paused) {
+		for (c = 0; c < this.crew.length; c++) {
+			this.crew[c].update();
+		}
+		for (r = 0; r < this.rooms.length; r++) {
+			this.rooms[r].update();
+		}
+		flow();
 	}
 }
 
@@ -421,28 +479,39 @@ Ship.prototype.draw = function () {
 		this.doors[d].draw();
 	}
 	
+	var flood = 0;
+	for (s = 0; s < ship.grid.length; s++) {
+		flood += ship.grid[s].water;
+	}
+	
 	ctx.fillStyle = "rgba(50,50,50,0.75)";
-	ctx.fillRect(15, 50, 88, 35 + this.crew.length*30);
+	ctx.fillRect(5, 45, 88, 50);
+	ctx.fillStyle = "white";
+	ctx.font="10px Aldrich";
+	ctx.fillText("Flooding: "+Math.floor(100*flood/(10*ship.grid.length))+"%", 12, 60);
+	
+	ctx.fillStyle = "rgba(50,50,50,0.75)";
+	ctx.fillRect(5, 100, 88, 35 + this.crew.length*30);
 	ctx.fillStyle = "white";
 	ctx.font="24px Aldrich";
-	ctx.fillText("CREW", 22, 77);
+	ctx.fillText("CREW", 12, 127);
 	
 	for (c = 0; c < this.crew.length; c++) {
 		ctx.fillStyle = "rgba(0,0,0,0.75)";
-		ctx.fillRect(17, 85 + 30*c, 84, 28);
+		ctx.fillRect(7, 135 + 30*c, 84, 28);
 		if (mode == "move" && c == selected) {
 			ctx.fillStyle = "rgba(0,255,0,0.25)";
-			ctx.fillRect(15, 83 + 30*c, 88, 32);
+			ctx.fillRect(5, 133 + 30*c, 88, 32);
 		}
 		ctx.fillStyle = "white";
 		ctx.font="12px Aldrich";
-		ctx.fillText(this.crew[c].name, 37, 100 + 30*c);
+		ctx.fillText(this.crew[c].name, 27, 150 + 30*c);
 		ctx.fillStyle = this.crew[c].color;
-		ctx.fillRect(25, 92 + 30*c, this.crew[c].w / 2, this.crew[c].h / 2)
+		ctx.fillRect(15, 142 + 30*c, this.crew[c].w / 2, this.crew[c].h / 2)
 		ctx.fillStyle = "rgba(255,255,255,0.25)";
-		ctx.fillRect(37, 104 + 30*c, 60, 5);
+		ctx.fillRect(27, 154 + 30*c, 60, 5);
 		ctx.fillStyle = "green";
-		ctx.fillRect(37, 104 + 30*c, 60 * ship.crew[c].hp / ship.crew[c].hpMax, 5);
+		ctx.fillRect(27, 154 + 30*c, 60 * ship.crew[c].hp / ship.crew[c].hpMax, 5);
 	}
 }
 
@@ -541,8 +610,11 @@ var doors = [
 	new Door(510, 100, "v", ["h2", "i2"]), new Door(510, 220, "v", ["h5", "i5"]),
 	new Door(530, 160, "h", ["i3", "i4"]),
 	new Door(590, 140, "v", ["j3", "k3"]), new Door(590, 180, "v", ["j4", "k4"]),
-	new Door(670, 140, "v", ["l3", "m3"]), new Door(670, 180, "v", ["l4", "m4"]), 
-	new Door(750, 180, "v", ["n4", "o4"])
+	new Door(670, 140, "v", ["l3", "m3"]), new Door(670, 180, "v", ["l4", "m4"]),
+	new Door(750, 180, "v", ["n4", "o4"]),
+	new Door(190, 140, "v", ["a3", null]), new Door(190, 180, "v", ["a4", null]),
+	new Door(450,  40, "h", ["g1", null]), new Door(490,  40, "h", ["h1", null]),
+	new Door(450, 280, "h", ["g6", null]), new Door(490, 280, "h", ["h6", null])
 ];
 
 var ship = new Ship("test", grid, rooms, [new CrewMember(210, 140, "a3", "cyan"), new CrewMember(250, 140, "b3"), new CrewMember(290, 140, "c3", "yellow")], doors);
@@ -557,7 +629,7 @@ function draw() {
 	ctx.fillRect(0, 0, 1000, 600);
 	
 	ship.draw();
-	if (!paused && frame % 5 == 0) ship.update();
+	if (frame % 5 == 0) ship.update();
 	
 	/*ctx.globalAlpha = 0.25;
     ctx.drawImage(kestrelImg, 63, -115, kestrelImg.width * 1.15, kestrelImg.height * 1.15);
@@ -579,7 +651,7 @@ function draw() {
 	ctx.fillRect(mouseX - 3, mouseY - 7, 6, 14);
 	ctx.fillRect(mouseX - 7, mouseY - 3, 14, 6);
 	if (mode == "normal") ctx.fillStyle = "#fff";
-	if (mode == "move") ctx.fillStyle = "#f0f";
+	if (mode == "move") ctx.fillStyle = "#0a0";
 	ctx.fillRect(mouseX - 1, mouseY - 5, 2, 10);
 	ctx.fillRect(mouseX - 5, mouseY - 1, 10, 2);
 	
@@ -598,15 +670,18 @@ document.onmousemove = function(e) {
 
 document.onmousedown = function(e) {
     e = window.event || e;
+    e.preventDefault();
 	
 	//used to make sure one click only activates one action
 	var handled = false;
 	
 	if (mode == "normal") {
 		for (c = 0; c < ship.crew.length; c++) {
-			if ((mouseX > ship.crew[c].x - ship.crew[c].w / 2 && mouseX < ship.crew[c].x + ship.crew[c].w / 2 && mouseY > ship.crew[c].y - ship.crew[c].h / 2 && mouseY < ship.crew[c].y + ship.crew[c].h / 2) || (mouseX > 17 && mouseX < 101 && mouseY > 85 + 30*c && mouseY < 113 + 30*c)) {
+			//																																													ctx.fillRect(7, 135 + 30*c, 84, 28);
+			if ((mouseX > ship.crew[c].x - ship.crew[c].w / 2 && mouseX < ship.crew[c].x + ship.crew[c].w / 2 && mouseY > ship.crew[c].y - ship.crew[c].h / 2 && mouseY < ship.crew[c].y + ship.crew[c].h / 2) || (mouseX > 7 && mouseX < 91 && mouseY > 135 + 30*c && mouseY < 163 + 30*c)) {
 				mode = "move";
 				selected = c;
+				ship.crew[c].auto = false;
 				handled = true;
 			}
 		}
@@ -625,16 +700,44 @@ document.onmousedown = function(e) {
 		for (r = 0; r < ship.rooms.length; r++) {
 			if (mouseX > ship.rooms[r].x - ship.rooms[r].w / 2 && mouseX < ship.rooms[r].x + ship.rooms[r].w / 2 && mouseY > ship.rooms[r].y - ship.rooms[r].h / 2 && mouseY < ship.rooms[r].y + ship.rooms[r].h / 2) {
 				for (s = 0; s < ship.rooms[r].squares.length; s++) {
-					console.log(ship.rooms[r].squares[s]);
 					var occupied = false;
 					for (c = 0; c < ship.crew.length; c++) {
-						if (c != selected && (ship.crew[c].location == ship.rooms[r].squares[s] || ship.crew[c].goal == ship.rooms[r].squares[s])) {
+						if (c != selected && ((ship.crew[c].location == ship.rooms[r].squares[s] && ship.crew[c].target == ship.rooms[r].squares[s]) || ship.crew[c].goal == ship.rooms[r].squares[s])) {
 							occupied = true;
 							break;
 						}
 					}
 					if (!occupied) {
 						ship.crew[selected].goal = ship.rooms[r].squares[s];
+						for (m = 0; m < ship.rooms.length; m++) {
+							if (ship.rooms[m].squares[0] == ship.crew[selected].location) {
+								if (ship.rooms[m].system != null) {
+									for (p = 1; p < ship.rooms[m].squares.length; p++) {
+										var assigned = false;
+										for (c = 0; c < ship.crew.length; c++) {
+											if (ship.rooms[m].squares[p] == ship.crew[c].location && ship.rooms[m].squares[p] == ship.crew[c].target) {
+												ship.crew[c].goal = ship.rooms[m].squares[0];
+												ship.crew[c].auto = true;
+												assigned = true;
+												break;
+											}
+										}
+										if (assigned) break;
+										else {
+											for (c = 0; c < ship.crew.length; c++) {
+												if (ship.rooms[m].squares[p] == ship.crew[c].goal) {
+													ship.crew[c].goal = ship.rooms[m].squares[0];
+													assigned = true;
+													break;
+												}
+											}
+										}
+										if (assigned) break;
+									}
+								}
+								break;
+							}
+						}
 						break;
 					}
 				}
