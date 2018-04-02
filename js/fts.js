@@ -36,7 +36,7 @@ function CrewMember (x, y, location, color) {
 	this.y = y;
 	
 	this.w = 15;
-	this.h = 25;
+	this.h = 15;
 	
 	this.color = color || "red";
 	
@@ -51,10 +51,11 @@ function CrewMember (x, y, location, color) {
 	this.location = location;
 	
 	this.xspd = 4;
-	this.yspd = 2;
+	this.yspd = 4;
 	
 	this.name = names.splice(Math.floor(Math.random() * names.length), 1);
 	this.hp = 100;
+	this.hpMax = 100;
 	
 	this.pilot = 0;
 	this.gun = 0;
@@ -146,8 +147,10 @@ CrewMember.prototype.draw = function() {
 
 //SQUARE
 //individual squares of the ship
-function Square (x, y, id, blacklist) {
+function Square (x, y, id, room) {
 	this.id = id;
+	
+	this.room = room;
 
 	this.x = x;
 	this.y = y;
@@ -158,15 +161,17 @@ function Square (x, y, id, blacklist) {
 	this.connections = [];
 	this.connections[0] = [];
 	
-	//used to denote walls, empty by default
-	this.blacklist = blacklist || [];
+	this.blacklist = [];
+	
+	//indicates flood level of square
+	this.water = 0;
 }
 
 //displays individual squares
 Square.prototype.draw = function () {
 	ctx.fillStyle = "#aaa";
 	ctx.fillRect(this.x - this.w / 2 - 1, this.y - this.h / 2 - 1, this.w + 2, this.h + 2);
-	ctx.fillStyle = "#666";
+	ctx.fillStyle = "#888";
 	ctx.fillRect(this.x - this.w / 2 + 1, this.y - this.h / 2 + 1, this.w - 2, this.h - 2);
 	for (c = 0; c < ship.crew.length; c++) {
 		if (ship.crew[c].goal == this.id) {
@@ -176,23 +181,124 @@ Square.prototype.draw = function () {
 	}
 }
 
+//ROOM
+//rooms of the ship
+function Room (x, y, w, h, id, squares, system) {
+	this.x = x;
+	this.y = y;
+	
+	this.w = w;
+	this.h = h;
+	
+	this.id = id;
+	
+	this.squares = squares || [];
+	
+	this.system = system || null;
+}
+
+Room.prototype.draw = function () {
+	ctx.fillStyle = "white";
+	ctx.fillRect(this.x - this.w / 2 - 2, this.y - this.h / 2 - 2, this.w + 4, 4);
+	ctx.fillRect(this.x - this.w / 2 - 2, this.y + this.h / 2 - 2, this.w + 4, 4);
+	ctx.fillRect(this.x - this.w / 2 - 2, this.y - this.h / 2 - 2, 4, this.h + 4);
+	ctx.fillRect(this.x + this.w / 2 - 2, this.y - this.h / 2 - 2, 4, this.h + 4);
+}
+
+//DOOR
+//doors between rooms
+function Door (x, y, orientation, connections) {
+	this.x = x;
+	this.y = y;
+	this.orientation = orientation;
+	this.connections = connections;
+	this.w = 0;
+	this.h = 0;
+	if (this.orientation == "h") {
+		this.w = 36;
+		this.h = 6;
+	} else {
+		this.w = 6;
+		this.h = 36;
+	}
+	this.open = false;
+	this.held = false;
+	this.gap = 0;
+}
+
+//updates whether door should be open or close and alters gap accordingly 
+Door.prototype.update = function() {
+	this.open = this.held;
+	if (!this.open) {
+		for (c = 0; c < ship.crew.length; c++) {
+			if (Math.pow(Math.pow(ship.crew[c].x - this.x, 2) + Math.pow(ship.crew[c].y - this.y, 2), 0.5) < 20) {
+				this.open = true;
+				break;
+			}
+		}
+	}
+	
+	if (this.open) {
+		if (this.gap < 28) this.gap += 4;
+	} else {
+		if (this.gap > 0) this.gap -= 4;
+	}
+}
+
+//displays door
+Door.prototype.draw = function() {
+	ctx.fillStyle = "#333";
+	if (this.orientation == "h") {
+		ctx.fillRect(this.x - 18, this.y - 3, 18 - this.gap / 2, 6);
+		ctx.fillRect(this.x + this.gap / 2, this.y - 3, 18 - this.gap / 2, 6);
+	} else {
+		ctx.fillRect(this.x - 3, this.y - 18, 6, 18 - this.gap / 2);
+		ctx.fillRect(this.x - 3, this.y + this.gap / 2, 6, 18 - this.gap / 2);
+	}
+}
+
+function areConnected (a, b) {
+	if (a.room == b.room) return true;
+	for (d = 0; d < ship.doors.length; d++) {
+		if (ship.doors[d].connections.indexOf(a.id) >= 0 && ship.doors[d].connections.indexOf(b.id) >= 0) return true;
+	}
+	return false;
+}
 
 //SHIP
 //player controlled ship
-function Ship (id, grid, crew) {
+function Ship (id, grid, rooms, crew, doors) {
 	this.id = id;
 	this.hull = 100;
 	this.grid = grid;
+	this.rooms = rooms;
 	this.crew = crew;
+	this.doors = doors;
+}
+
+//updates ship's contents
+Ship.prototype.update = function () {
+	for (c = 0; c < this.crew.length; c++) {
+		this.crew[c].update();
+	}
+	for (d = 0; d < this.doors.length; d++) {
+		this.doors[d].update();
+	}
 }
 
 //displays entire ship and contents
 Ship.prototype.draw = function () {
-	for (r = 0; r < this.grid.length; r++) {
-		this.grid[r].draw();
+	for (s = 0; s < this.grid.length; s++) {
+		this.grid[s].draw();
 	}
 	for (c = 0; c < this.crew.length; c++) {
 		this.crew[c].draw();
+	}
+	for (r = 0; r < this.rooms.length; r++) {
+		this.rooms[r].draw();
+	}
+	for (d = 0; d < this.doors.length; d++) {
+		this.doors[d].draw();
 	}
 	
 	ctx.fillStyle = "rgba(50,50,50,0.75)";
@@ -210,16 +316,13 @@ Ship.prototype.draw = function () {
 		}
 		ctx.fillStyle = "white";
 		ctx.font="12px Aldrich";
-		ctx.fillText(this.crew[c].name, 50, 100 + 30*c);
+		ctx.fillText(this.crew[c].name, 37, 100 + 30*c);
 		ctx.fillStyle = this.crew[c].color;
 		ctx.fillRect(25, 92 + 30*c, this.crew[c].w / 2, this.crew[c].h / 2)
-	}
-}
-
-//updates ship's contents
-Ship.prototype.update = function () {
-	for (c = 0; c < this.crew.length; c++) {
-		this.crew[c].update();
+		ctx.fillStyle = "rgba(255,255,255,0.25)";
+		ctx.fillRect(37, 104 + 30*c, 60, 5);
+		ctx.fillStyle = "green";
+		ctx.fillRect(37, 104 + 30*c, 60 * ship.crew[c].hp / ship.crew[c].hpMax, 5);
 	}
 }
 
@@ -228,7 +331,7 @@ Ship.prototype.path = function () {
 	//sets up all initial connections to adjacent squares
 	for (s = 0; s < this.grid.length; s++) {
 		for (p = 0; p < this.grid.length; p++) {
-			if (s != p && Math.pow(Math.pow(this.grid[s].x - this.grid[p].x, 2) + Math.pow(this.grid[s].y - this.grid[p].y, 2), 0.5) < 45 && this.grid[s].blacklist.indexOf(this.grid[p].id) == -1) {
+			if (s != p && Math.pow(Math.pow(this.grid[s].x - this.grid[p].x, 2) + Math.pow(this.grid[s].y - this.grid[p].y, 2), 0.5) < 45 && areConnected(this.grid[s], this.grid[p])) {
 				this.grid[s].connections[0][this.grid[s].connections[0].length] = this.grid[p].id;
 			}
 		}
@@ -261,17 +364,68 @@ Ship.prototype.path = function () {
 	}
 }
 
-var labels = ["a", "b", "c", "d", "e", "f", "g", "h"];
+//   A  B  C  D  E  F  G  H  I  J  K  L  M  N  O
+//1                   [J][J]
+//2    [C][C][E][E]   [H][H][L][L]
+//3 [A][B][B]   [G][G][H][H][L][L][N][N][P][P][Q]
+//4 [A][B][B]   [G][G][I][I][M][M][O][O][P][P][Q]
+//5    [D][D][F][F]   [I][I][M][M]
+//6                   [K][K]
 
-var grid = [];//[new Square(60, 60, "a1"), new Square(100, 60, "b1"), new Square(140, 60, "c1"), new Square(180, 60, "d1"), new Square(220, 60, "e1"), new Square(60, 100, "a2"), new Square(220, 100, "e2"), new Square(60, 140, "a3"), new Square(100, 140, "b3"), new Square(140, 140, "c3"), new Square(180, 140, "d3"), new Square(220, 140, "e3")];
+//design of the kestrel from FTL
+var grid = [
+	new Square(210, 140, "a3", "A"), new Square(210, 180, "a4", "A"),
+	new Square(250, 100, "b2", "C"), new Square(250, 140, "b3", "B"), new Square(250, 180, "b4", "B"), new Square(250, 220, "b5", "D"),
+	new Square(290, 100, "c2", "C"), new Square(290, 140, "c3", "B"), new Square(290, 180, "c4", "B"), new Square(290, 220, "c5", "D"),
+	new Square(330, 100, "d2", "E"), new Square(330, 220, "d5", "F"),
+	new Square(370, 100, "e2", "E"), new Square(370, 140, "e3", "G"), new Square(370, 180, "e4", "G"), new Square(370, 220, "e5", "F"),
+	new Square(410, 140, "f3", "G"), new Square(410, 180, "f4", "G"),
+	new Square(450,  60, "g1", "J"), new Square(450, 100, "g2", "H"), new Square(450, 140, "g3", "H"), new Square(450, 180, "g4", "I"), new Square(450, 220, "g5", "I"), new Square(450, 260, "g6", "K"),
+	new Square(490,  60, "h1", "J"), new Square(490, 100, "h2", "H"), new Square(490, 140, "h3", "H"), new Square(490, 180, "h4", "I"), new Square(490, 220, "h5", "I"), new Square(490, 260, "h6", "K"),
+	new Square(530, 100, "i2", "L"), new Square(530, 140, "i3", "L"), new Square(530, 180, "i4", "M"), new Square(530, 220, "i5", "M"),
+	new Square(570, 100, "j2", "L"), new Square(570, 140, "j3", "L"), new Square(570, 180, "j4", "M"), new Square(570, 220, "j5", "M"),
+	new Square(610, 140, "k3", "N"), new Square(610, 180, "k4", "O"),
+	new Square(650, 140, "l3", "N"), new Square(650, 180, "l4", "O"),
+	new Square(690, 140, "m3", "P"), new Square(690, 180, "m4", "P"),
+	new Square(730, 140, "n3", "P"), new Square(730, 180, "n4", "P"),
+	new Square(770, 140, "o3", "Q"), new Square(770, 180, "o4", "Q")
+];
 
-for (i = 0; i < 7; i++) {
-	for (j = 0 + (i%2)*2; j < 8; j += 1 + (i%2)*2) {
-		grid[grid.length] = new Square(210 + 40 * j, 60 + 40 * i, labels[j]+(i+1));
-	}	
-}
+var rooms = [
+	new Room(210, 160, 40, 80, "A", []),
+	new Room(270, 160, 80, 80, "B", []),
+	new Room(270, 100, 80, 40, "C", []),
+	new Room(270, 220, 80, 40, "D", []),
+	new Room(350, 100, 80, 40, "E", []),
+	new Room(350, 220, 80, 40, "F", []),
+	new Room(390, 160, 80, 80, "G", []),
+	new Room(470, 120, 80, 80, "H", []),
+	new Room(470, 200, 80, 80, "I", []),
+	new Room(470,  60, 80, 40, "J", []),
+	new Room(470, 260, 80, 40, "K", []),
+	new Room(550, 120, 80, 80, "L", []),
+	new Room(550, 200, 80, 80, "M", []),
+	new Room(630, 140, 80, 40, "N", []),
+	new Room(630, 180, 80, 40, "O", []),
+	new Room(710, 160, 80, 80, "P", []),
+	new Room(770, 160, 40, 80, "Q", [])
+];
 
-var ship = new Ship("test", grid, [new CrewMember(210, 60, "a1", "cyan"), new CrewMember(250, 60, "b1"), new CrewMember(290, 60, "c1", "yellow")]);
+var doors = [
+	new Door(230, 140, "v", ["a3", "b3"]), new Door(230, 180, "v", ["a4", "b4"]),
+	new Door(290, 120, "h", ["c2", "c3"]), new Door(290, 200, "h", ["c4", "c5"]),
+	new Door(310, 100, "v", ["c2", "d2"]), new Door(310, 220, "v", ["c5", "d5"]),
+	new Door(370, 120, "h", ["e2", "e3"]), new Door(370, 200, "h", ["e4", "e5"]),
+	new Door(430, 140, "v", ["f3", "g3"]), new Door(430, 180, "v", ["f4", "g4"]),
+	new Door(490,  80, "h", ["h1", "h2"]), new Door(490, 240, "h", ["h5", "h6"]),
+	new Door(510, 100, "v", ["h2", "i2"]), new Door(510, 220, "v", ["h5", "i5"]),
+	new Door(530, 160, "h", ["i3", "i4"]),
+	new Door(590, 140, "v", ["j3", "k3"]), new Door(590, 180, "v", ["j4", "k4"]),
+	new Door(670, 140, "v", ["l3", "m3"]), new Door(670, 180, "v", ["l4", "m4"]), 
+	new Door(750, 180, "v", ["n4", "o4"])
+];
+
+var ship = new Ship("test", grid, rooms, [new CrewMember(210, 140, "a3", "cyan"), new CrewMember(250, 140, "b3"), new CrewMember(290, 140, "c3", "yellow")], doors);
 ship.path();
 
 
@@ -297,10 +451,13 @@ function draw() {
 		ctx.fillRect(510, 250, 25, 100);
 	}
 	
-	if (mode == "normal") ctx.fillStyle = "#000";
+	ctx.fillStyle = "#000";
+	ctx.fillRect(mouseX - 3, mouseY - 7, 6, 14);
+	ctx.fillRect(mouseX - 7, mouseY - 3, 14, 6);
+	if (mode == "normal") ctx.fillStyle = "#fff";
 	if (mode == "move") ctx.fillStyle = "#f0f";
-	ctx.fillRect(mouseX - 2, mouseY - 6, 4, 12);
-	ctx.fillRect(mouseX - 6, mouseY - 2, 12, 4);
+	ctx.fillRect(mouseX - 1, mouseY - 5, 2, 10);
+	ctx.fillRect(mouseX - 5, mouseY - 1, 10, 2);
 	
 }
 
@@ -322,11 +479,20 @@ document.onmousedown = function(e) {
 	
 	if (mode == "normal") {
 		for (c = 0; c < ship.crew.length; c++) {
-			if (mouseX > ship.crew[c].x - ship.crew[c].w / 2 && mouseX < ship.crew[c].x + ship.crew[c].w / 2 && mouseY > ship.crew[c].y - ship.crew[c].h / 2 && mouseY < ship.crew[c].y + ship.crew[c].h / 2) {
+			if ((mouseX > ship.crew[c].x - ship.crew[c].w / 2 && mouseX < ship.crew[c].x + ship.crew[c].w / 2 && mouseY > ship.crew[c].y - ship.crew[c].h / 2 && mouseY < ship.crew[c].y + ship.crew[c].h / 2) || (mouseX > 17 && mouseX < 101 && mouseY > 85 + 30*c && mouseY < 113 + 30*c)) {
 				mode = "move";
 				selected = c;
 				handled = true;
 			}
+		}
+		
+		for (d = 0; d < ship.doors.length; d++) {
+			if (mouseX > ship.doors[d].x - ship.doors[d].w / 2 && mouseX < ship.doors[d].x + ship.doors[d].w / 2 && mouseY > ship.doors[d].y - ship.doors[d].h / 2 && mouseY < ship.doors[d].y + ship.doors[d].h / 2) {
+				ship.doors[d].open = !ship.doors[d].held;
+				ship.doors[d].held = !ship.doors[d].held;
+				handled = true;
+			}
+			
 		}
 	}
 	
