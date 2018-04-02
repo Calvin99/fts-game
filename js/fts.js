@@ -1,6 +1,9 @@
 var canvas = document.getElementById("fts");
 var ctx = canvas.getContext("2d");
 
+var kestrelImg = new Image();
+kestrelImg.src = "images/kestrel.png";
+
 console.clear();
 
 var mouseX = null, mouseY = null;
@@ -177,6 +180,7 @@ Square.prototype.draw = function () {
 		if (ship.crew[c].goal == this.id) {
 			ctx.fillStyle = "rgba(0,255,0,0.125)";
 			ctx.fillRect(this.x - this.w / 2 - 1, this.y - this.h / 2 - 1, this.w + 2, this.h + 2);
+			break;
 		}
 	}
 }
@@ -203,6 +207,122 @@ Room.prototype.draw = function () {
 	ctx.fillRect(this.x - this.w / 2 - 2, this.y + this.h / 2 - 2, this.w + 4, 4);
 	ctx.fillRect(this.x - this.w / 2 - 2, this.y - this.h / 2 - 2, 4, this.h + 4);
 	ctx.fillRect(this.x + this.w / 2 - 2, this.y - this.h / 2 - 2, 4, this.h + 4);
+	if (this.system == "pilot") {
+		ctx.strokeStyle = "white";
+		ctx.lineWidth = 2;
+		ctx.beginPath();
+    	ctx.arc(this.x, this.y, 7, 0, 2 * Math.PI, false);
+    	ctx.stroke();
+    	for (p = 0; p < 4; p++) {
+			ctx.beginPath();
+			ctx.moveTo(this.x + Math.cos(Math.PI * p / 4) * 10, this.y + Math.sin(Math.PI * p / 4) * 10);
+			ctx.lineTo(this.x - Math.cos(Math.PI * p / 4) * 10, this.y - Math.sin(Math.PI * p / 4) * 10)
+			ctx.stroke();
+    		
+    	}
+	}
+	else if (this.system == "sonar") {
+		ctx.strokeStyle = "white";
+		ctx.lineWidth = 1;
+		ctx.beginPath();
+    	ctx.arc(this.x, this.y, 3, 0, 2 * Math.PI, false);
+    	ctx.stroke();
+		ctx.beginPath();
+    	ctx.arc(this.x, this.y, 6, 0, 2 * Math.PI, false);
+    	ctx.stroke();
+		ctx.beginPath();
+    	ctx.arc(this.x, this.y, 9, 0, 2 * Math.PI, false);
+    	ctx.stroke();
+		ctx.lineWidth = 2;
+		ctx.beginPath();
+		ctx.moveTo(this.x, this.y);
+		ctx.lineTo(this.x + Math.cos(Math.PI / 4) * 9, this.y - Math.sin(Math.PI / 4) * 9);
+		ctx.stroke();
+	}
+	else if (this.system == "medbay") {
+		ctx.strokeStyle = "white";
+		ctx.lineWidth = 6;
+		ctx.beginPath();
+		ctx.moveTo(this.x - 8, this.y);
+		ctx.lineTo(this.x + 8, this.y);
+		ctx.stroke();
+		ctx.beginPath();
+		ctx.moveTo(this.x, this.y - 8);
+		ctx.lineTo(this.x, this.y + 8);
+		ctx.stroke();
+	
+	}
+	else if (this.system == "doors") {
+		ctx.strokeStyle = "white";
+		ctx.lineWidth = 6;
+		ctx.beginPath();
+		ctx.moveTo(this.x - 4, this.y - 8);
+		ctx.lineTo(this.x - 4, this.y + 8);
+		ctx.stroke();
+		ctx.beginPath();
+		ctx.moveTo(this.x + 4, this.y - 8);
+		ctx.lineTo(this.x + 4, this.y + 8);
+		ctx.stroke();
+	
+	}
+	else if (this.system == "weapons") {
+		ctx.strokeStyle = "white";
+		ctx.lineWidth = 4;
+		ctx.beginPath();
+		ctx.moveTo(this.x - 8, this.y - 5);
+		ctx.lineTo(this.x, this.y - 5);
+		ctx.stroke();
+		ctx.beginPath();
+    	ctx.ellipse(this.x, this.y - 5, 2, 10, Math.PI / 2, -Math.PI, false);
+		ctx.fill();
+		ctx.beginPath();
+		ctx.moveTo(this.x - 7, this.y - 9);
+		ctx.lineTo(this.x - 7, this.y - 1);
+		ctx.lineTo(this.x - 1, this.y - 5);
+		ctx.fill();
+		
+		
+		ctx.beginPath();
+		ctx.moveTo(this.x - 8, this.y + 5);
+		ctx.lineTo(this.x, this.y + 5);
+		ctx.stroke();
+		ctx.beginPath();
+    	ctx.ellipse(this.x, this.y + 5, 2, 10, Math.PI / 2, -Math.PI, false);
+		ctx.fill();
+		ctx.beginPath();
+		ctx.moveTo(this.x - 7, this.y + 9);
+		ctx.lineTo(this.x - 7, this.y + 1);
+		ctx.lineTo(this.x - 1, this.y + 5);
+		ctx.fill();
+	
+	}
+	else if (this.system == "drain") {
+		ctx.strokeStyle = "white";
+		ctx.lineWidth = 2;
+		ctx.beginPath();
+    	ctx.arc(this.x, this.y, 7, 0, 2 * Math.PI, false);
+    	ctx.stroke();
+    	for (p = -1; p < 2; p++) {
+			ctx.beginPath();
+			ctx.moveTo(this.x + Math.cos(Math.PI * p / 6) * 7, this.y + Math.sin(Math.PI * p / 6) * 7);
+			ctx.lineTo(this.x - Math.cos(Math.PI * p / 6) * 7, this.y + Math.sin(Math.PI * p / 6) * 7);
+			ctx.stroke();
+    		
+    	}
+	}
+	else if (this.system == "engine") {
+		ctx.strokeStyle = "white";
+		ctx.lineWidth = 3;
+		for (p = 0; p < 5; p += 2) {
+			ctx.beginPath();
+    		ctx.arc(this.x + Math.cos(Math.PI * p / 3) * 4, this.y + Math.sin(Math.PI * p / 3) * 4, 4, Math.PI * p / 3, Math.PI * p / 3 + Math.PI, true);
+    		ctx.stroke();	
+		}
+		ctx.lineWidth = 2;
+		ctx.beginPath();
+		ctx.arc(this.x, this.y, 9, 0, 2 * Math.PI, false);
+		ctx.stroke();
+	}
 }
 
 //DOOR
@@ -291,11 +411,11 @@ Ship.prototype.draw = function () {
 	for (s = 0; s < this.grid.length; s++) {
 		this.grid[s].draw();
 	}
-	for (c = 0; c < this.crew.length; c++) {
-		this.crew[c].draw();
-	}
 	for (r = 0; r < this.rooms.length; r++) {
 		this.rooms[r].draw();
+	}
+	for (c = 0; c < this.crew.length; c++) {
+		this.crew[c].draw();
 	}
 	for (d = 0; d < this.doors.length; d++) {
 		this.doors[d].draw();
@@ -392,23 +512,23 @@ var grid = [
 ];
 
 var rooms = [
-	new Room(210, 160, 40, 80, "A", []),
-	new Room(270, 160, 80, 80, "B", []),
-	new Room(270, 100, 80, 40, "C", []),
-	new Room(270, 220, 80, 40, "D", []),
-	new Room(350, 100, 80, 40, "E", []),
-	new Room(350, 220, 80, 40, "F", []),
-	new Room(390, 160, 80, 80, "G", []),
-	new Room(470, 120, 80, 80, "H", []),
-	new Room(470, 200, 80, 80, "I", []),
-	new Room(470,  60, 80, 40, "J", []),
-	new Room(470, 260, 80, 40, "K", []),
-	new Room(550, 120, 80, 80, "L", []),
-	new Room(550, 200, 80, 80, "M", []),
-	new Room(630, 140, 80, 40, "N", []),
-	new Room(630, 180, 80, 40, "O", []),
-	new Room(710, 160, 80, 80, "P", []),
-	new Room(770, 160, 40, 80, "Q", [])
+	new Room(210, 160, 40, 80, "A", ["a3", "a4"]),
+	new Room(270, 160, 80, 80, "B", ["b3", "b4", "c3", "c4"], "engine"),
+	new Room(270, 100, 80, 40, "C", ["b2", "c2"], "drain"),
+	new Room(270, 220, 80, 40, "D", ["b5", "c5"]),
+	new Room(350, 100, 80, 40, "E", ["d2", "e2"]),
+	new Room(350, 220, 80, 40, "F", ["d5", "e5"]),
+	new Room(390, 160, 80, 80, "G", ["e3", "e4", "f3", "f4"], "weapons"),
+	new Room(470, 120, 80, 80, "H", ["g2", "g3", "h2", "h3"]),
+	new Room(470, 200, 80, 80, "I", ["g4", "g5", "h4", "h5"]),
+	new Room(470,  60, 80, 40, "J", ["g1", "h1"]),
+	new Room(470, 260, 80, 40, "K", ["g6", "h6"]),
+	new Room(550, 120, 80, 80, "L", ["i2", "i3", "j2", "j3"], "medbay"),
+	new Room(550, 200, 80, 80, "M", ["i4", "i5", "j4", "j5"]),
+	new Room(630, 140, 80, 40, "N", ["k3", "l3"], "doors"),
+	new Room(630, 180, 80, 40, "O", ["k4", "l4"], "sonar"),
+	new Room(710, 160, 80, 80, "P", ["m3", "m4", "n3", "n4"]),
+	new Room(770, 160, 40, 80, "Q", ["o3", "o4"], "pilot")
 ];
 
 var doors = [
@@ -430,14 +550,18 @@ ship.path();
 
 
 //DRAW
-setInterval(draw, 50);
-
+setInterval(draw, 10);
+frame = 0;
 function draw() {
 	ctx.fillStyle = "#005";
 	ctx.fillRect(0, 0, 1000, 600);
 	
 	ship.draw();
-	if (!paused) ship.update();
+	if (!paused && frame % 5 == 0) ship.update();
+	
+	/*ctx.globalAlpha = 0.25;
+    ctx.drawImage(kestrelImg, 63, -115, kestrelImg.width * 1.15, kestrelImg.height * 1.15);
+	ctx.globalAlpha = 1;*/
 	
 	if (paused) {
 		ctx.fillStyle = "rgba(0,0,0,0.4)";
@@ -459,6 +583,7 @@ function draw() {
 	ctx.fillRect(mouseX - 1, mouseY - 5, 2, 10);
 	ctx.fillRect(mouseX - 5, mouseY - 1, 10, 2);
 	
+	frame++;
 }
 
 //IO
@@ -497,17 +622,21 @@ document.onmousedown = function(e) {
 	}
 	
 	if (mode == "move" && !handled) {
-		for (s = 0; s < ship.grid.length; s++) {
-			if (mouseX > ship.grid[s].x - ship.grid[s].w / 2 && mouseX < ship.grid[s].x + ship.grid[s].w / 2 && mouseY > ship.grid[s].y - ship.grid[s].h / 2 && mouseY < ship.grid[s].y + ship.grid[s].h / 2) {
-				var occupied = false;
-				for (c = 0; c < ship.crew.length; c++) {
-					if (c != selected && (ship.crew[c].location == ship.grid[s].id || ship.crew[c].goal == ship.grid[s].id)) {
-						occupied = true;
+		for (r = 0; r < ship.rooms.length; r++) {
+			if (mouseX > ship.rooms[r].x - ship.rooms[r].w / 2 && mouseX < ship.rooms[r].x + ship.rooms[r].w / 2 && mouseY > ship.rooms[r].y - ship.rooms[r].h / 2 && mouseY < ship.rooms[r].y + ship.rooms[r].h / 2) {
+				for (s = 0; s < ship.rooms[r].squares.length; s++) {
+					console.log(ship.rooms[r].squares[s]);
+					var occupied = false;
+					for (c = 0; c < ship.crew.length; c++) {
+						if (c != selected && (ship.crew[c].location == ship.rooms[r].squares[s] || ship.crew[c].goal == ship.rooms[r].squares[s])) {
+							occupied = true;
+							break;
+						}
+					}
+					if (!occupied) {
+						ship.crew[selected].goal = ship.rooms[r].squares[s];
 						break;
 					}
-				}
-				if (!occupied) {
-					ship.crew[selected].goal = ship.grid[s].id;
 				}
 				mode = "normal";
 				handled = true;
