@@ -850,16 +850,16 @@ var doors = [
 	new Door(450, 280, "h", ["g6", null]), new Door(490, 280, "h", ["h6", null])
 ];
 
-var ship = new Ship("test", grid, rooms, [new CrewMember(770, 140, "o3", "cyan"), new CrewMember(370, 140, "e3"), new CrewMember(250, 140, "b3", "yellow")], doors);
+var ship = new Ship("test", grid, rooms, [new CrewMember(770, 140, "o3", "cyan"), new CrewMember(370, 140, "e3"), new CrewMember(250, 140, "b3", "yellow"), new CrewMember(610, 180, "k4", "magenta")], doors);
 ship.path();
 
 
 //BUBBLES
 //bubbles for aesthetics
 function Bubble () {
-	this.x = Math.floor(Math.random() * 1200);
+	this.x = Math.floor(Math.random() * 1220);
 	this.y = Math.floor(Math.random() * 600);
-	this.v = Math.floor(Math.random() * 3);
+	this.v = Math.round(Math.random() + Math.random() + Math.random());
 	this.z = Math.floor(Math.random() * 40);
 	this.r = Math.round(Math.pow(Math.random(), 2)) + 1;
 }
