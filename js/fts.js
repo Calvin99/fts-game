@@ -55,6 +55,8 @@ function CrewMember (x, y, location, color) {
 	
 	this.location = location;
 	
+	this.station = location;
+	
 	this.xspd = 4;
 	this.yspd = 4;
 	
@@ -62,15 +64,37 @@ function CrewMember (x, y, location, color) {
 	this.hp = 100;
 	this.hpMax = 100;
 	
+	this.air = 100;
+	this.airMax = 100;
+	
 	this.pilot = 0;
-	this.gun = 0;
-	this.sonar = 0;
-	this.engine = 0;
+	this.engines = 0;
+	this.weapons = 0;
 	this.repair = 0;
+	this.sonar = 0;
 }
 
 //updates pathfinding and location of player controlled crew members
-CrewMember.prototype.update = function() {
+CrewMember.prototype.update = function() {	
+	var spdMod = 1;
+	for (s = 0; s < ship.grid.length; s++) {
+		if (ship.grid[s].id == this.location) {
+			if (ship.grid[s].water > 6) {
+				spdMod = 1 / 4;
+				if (this.air > 0) this.air--;
+			}
+			else if (ship.grid[s].water > 3) {
+				spdMod = 1 / 2;
+				if (this.air < this.airMax) this.air++;
+			} else if (this.air < this.airMax) {
+				this.air++;
+			}
+			break;
+		}
+	}
+	if (this.air == 0 && this.hp > 0) {
+		this.hp--;
+	}
 	if (this.goal != null) {
 		//identifies goal location
 		if (this.xgoal == null) {
@@ -101,15 +125,6 @@ CrewMember.prototype.update = function() {
 						i++;
 					}
 				}
-			}
-		}
-		
-		var spdMod = 1;
-		for (s = 0; s < ship.grid.length; s++) {
-			if (ship.grid[s].id == this.location) {
-				if (ship.grid[s].water > 5) spdMod = 1 / 2;
-				if (ship.grid[s].water > 8) spdMod = 1 / 4;
-				break;
 			}
 		}
 		
@@ -216,6 +231,7 @@ function flow() {
 	}
 }
 
+
 //ROOM
 //rooms of the ship
 function Room (x, y, w, h, id, squares, system) {
@@ -227,16 +243,16 @@ function Room (x, y, w, h, id, squares, system) {
 	
 	this.id = id;
 	
-	this.hp = 100;
-	
-	this.power = 0;
-	this.powerMax = 0;
-	
-	this.manned = false;
-	
 	this.squares = squares || [];
 	
 	this.system = system || null;
+	
+	this.hp = 100;
+	
+	this.power = 1;
+	this.powerMax = 1;
+	
+	this.manned = false;
 }
 
 Room.prototype.update = function () {
@@ -364,10 +380,10 @@ Room.prototype.draw = function () {
     	}
 	}
 	else if (this.system == "engine") {
-		ctx.lineWidth = 3;
-		for (p = 0; p < 5; p += 2) {
+		ctx.lineWidth = 2;
+		for (p = 0; p < 5; p ++) {
 			ctx.beginPath();
-    		ctx.arc(this.x + Math.cos(Math.PI * p / 3) * 4, this.y + Math.sin(Math.PI * p / 3) * 4, 4, Math.PI * p / 3, Math.PI * p / 3 + Math.PI, true);
+    		ctx.arc(this.x + Math.cos(Math.PI * p / 2.5) * 4, this.y + Math.sin(Math.PI * p / 2.5) * 4, 4, Math.PI * p / 2.5, Math.PI * p / 2.5 + Math.PI, false);
     		ctx.stroke();	
 		}
 		ctx.lineWidth = 2;
@@ -375,7 +391,65 @@ Room.prototype.draw = function () {
 		ctx.arc(this.x, this.y, 9, 0, 2 * Math.PI, false);
 		ctx.stroke();
 	}
+	else if (this.system == "drones") {
+		ctx.fillRect(this.x - 7, this.y, 14, 10);
+		ctx.lineWidth = 2;
+		ctx.beginPath();
+		ctx.moveTo(this.x, this.y);
+		ctx.lineTo(this.x, this.y - 7);
+		ctx.stroke();
+		ctx.beginPath();
+		ctx.arc(this.x, this.y - 7, 2, 0, 2 * Math.PI, false);
+		ctx.fill();
+		ctx.lineWidth = 1;
+		ctx.beginPath();
+		ctx.arc(this.x, this.y - 7, 4, -Math.PI / 4, Math.PI / 4, false);
+		ctx.stroke();
+		ctx.beginPath();
+		ctx.arc(this.x, this.y - 7, 4, Math.PI * 3 / 4, Math.PI * 5 / 4, false);
+		ctx.stroke();
+		ctx.beginPath();
+		ctx.arc(this.x, this.y - 7, 6, -Math.PI / 4, Math.PI / 4, false);
+		ctx.stroke();
+		ctx.beginPath();
+		ctx.arc(this.x, this.y - 7, 6, Math.PI * 3 / 4, Math.PI * 5 / 4, false);
+		ctx.stroke();
+	}
+	else if (this.system == "cloak") {
+		ctx.beginPath();
+		ctx.arc(this.x, this.y, 4, 0, 2 * Math.PI, false);
+		ctx.fill();
+		ctx.lineWidth = 2;
+		ctx.beginPath();
+		ctx.arc(this.x, this.y + 9, 15, Math.PI * 19 / 16, Math.PI * 29 / 16, false);
+		ctx.stroke();
+		ctx.beginPath();
+		ctx.arc(this.x, this.y - 9, 15, -Math.PI * 29 / 16, -Math.PI * 19 / 16, false);
+		ctx.stroke();
+		ctx.beginPath();
+	}
+	else if (this.system == "teleport") {
+		ctx.lineWidth = 3;
+		ctx.beginPath();
+		ctx.moveTo(this.x, this.y + 3);
+		ctx.lineTo(this.x, this.y - 8);
+		ctx.stroke();
+		ctx.beginPath();
+		ctx.moveTo(this.x + 1, this.y + 4);
+		ctx.lineTo(this.x - 5, this.y - 2);
+		ctx.stroke();
+		ctx.beginPath();
+		ctx.moveTo(this.x - 1, this.y + 4);
+		ctx.lineTo(this.x + 5, this.y - 2);
+		ctx.stroke();
+		ctx.lineWidth = 2;
+		ctx.beginPath();
+    	ctx.ellipse(this.x, this.y + 5, 10, 3, 0, - Math.PI / 4, Math.PI * 5 / 4, false);
+		ctx.stroke();
+		
+	}
 }
+
 
 //DOOR
 //doors between rooms
@@ -437,35 +511,70 @@ function areConnected (a, b) {
 	return false;
 }
 
+
 //SHIP
 //player controlled ship
 function Ship (id, grid, rooms, crew, doors) {
 	this.id = id;
-	this.hull = 100;
+	
+	this.hull = 40;	
+	this.hullMax = 40;
+	
 	this.grid = grid;
 	this.rooms = rooms;
+	
 	this.crew = crew;
+	
 	this.doors = doors;
+	
+	this.evasion = 0;
 }
 
 //updates ship's contents
 Ship.prototype.update = function () {
+	for (b = 0; b < bubbles.length; b++) {
+		bubbles[b].update();
+	}
 	for (d = 0; d < this.doors.length; d++) {
 		this.doors[d].update();
 	}
 	if (!paused) {
 		for (c = 0; c < this.crew.length; c++) {
 			this.crew[c].update();
+			if (this.crew[c].hp == 0) {
+				this.crew.splice(c, 1);
+				c--;
+			}
 		}
 		for (r = 0; r < this.rooms.length; r++) {
 			this.rooms[r].update();
 		}
 		flow();
 	}
+	this.evasion = 0;
+	var pilot = 0;
+	var engine = 0;
+	for (r = 0; r < ship.rooms.length; r++) {
+		if (ship.rooms[r].system == "engine") {
+			if (ship.rooms[r].hp > 50) engine = ship.rooms[r].power * 10;
+			else if (ship.rooms[r].hp > 0) engine = ship.rooms[r].power * 5;
+		} else if (ship.rooms[r].system == "pilot") {
+			for (c = 0; c < ship.crew.length; c++) {
+				if (ship.crew[c].location == ship.rooms[r].squares[0]) {
+					pilot = 10 + ship.crew[c].pilot;
+					break;
+				}
+			}
+		}
+	}
+	if (pilot > 0 && engine > 0) this.evasion = pilot + engine;
 }
 
 //displays entire ship and contents
 Ship.prototype.draw = function () {
+	for (b = 0; b < bubbles.length; b++) {
+		bubbles[b].draw();
+	}
 	for (s = 0; s < this.grid.length; s++) {
 		this.grid[s].draw();
 	}
@@ -485,34 +594,158 @@ Ship.prototype.draw = function () {
 	}
 	
 	ctx.fillStyle = "rgba(50,50,50,0.75)";
-	ctx.fillRect(5, 45, 88, 50);
+	ctx.fillRect(0, 0, 150, 25);
+	ctx.fillRect(150, 0, 150, 27);
+	ctx.fillRect(300, 0, 150, 29);
+	ctx.fillRect(450, 0, 153, 31);
+	ctx.fillRect(5, 25, 88, 35);
+	ctx.font="24px Aldrich";
 	ctx.fillStyle = "white";
-	ctx.font="10px Aldrich";
-	ctx.fillText("Flooding: "+Math.floor(100*flood/(10*ship.grid.length))+"%", 12, 60);
+	ctx.fillText("HULL", 16, 50);
+	
+	for (i = 0; i < this.hullMax; i++) {
+		if (i < this.hull) ctx.fillStyle = "white";
+		else ctx.fillStyle = "black";
+		var h;
+		if(i < 10) h = 22;
+		else if(i < 20) h = 24;
+		else if(i < 30) h = 26;
+		else h = 28;
+		ctx.fillRect(3 + 15 * i, 0, 12, h);
+	}
+	
+	ctx.fillStyle = "white";
 	
 	ctx.fillStyle = "rgba(50,50,50,0.75)";
-	ctx.fillRect(5, 100, 88, 35 + this.crew.length*30);
+	ctx.fillRect(5, 65, 88, 50);
+	ctx.fillStyle = "white";
+	ctx.font="10px Aldrich";
+	
+	ctx.fillText("Evasion  : "+this.evasion+"%", 11, 83);
+	
+	ctx.fillText("Flooding : "+Math.floor(100*flood/(10*ship.grid.length))+"%", 11, 103);
+	if (Math.floor(100*flood/(10*ship.grid.length)) >= 50) {
+		ctx.fillStyle = "red";
+		ctx.strokeStyle = "red";
+		ctx.beginPath();
+		ctx.moveTo(86, 108);
+		ctx.lineTo(103, 125);
+		ctx.lineTo(225, 125);
+		ctx.stroke();
+		ctx.fillText("Warning: High Flooding", 105, 120);
+	}
+	
+	ctx.fillStyle = "rgba(50,50,50,0.75)";
+	ctx.fillRect(5, 120, 88, 35 + this.crew.length*30);
 	ctx.fillStyle = "white";
 	ctx.font="24px Aldrich";
-	ctx.fillText("CREW", 12, 127);
+	ctx.fillText("CREW", 12, 147);
 	
 	for (c = 0; c < this.crew.length; c++) {
 		ctx.fillStyle = "rgba(0,0,0,0.75)";
-		ctx.fillRect(7, 135 + 30*c, 84, 28);
+		ctx.fillRect(7, 155 + 30*c, 84, 28);
 		if (mode == "move" && c == selected) {
 			ctx.fillStyle = "rgba(0,255,0,0.25)";
-			ctx.fillRect(5, 133 + 30*c, 88, 32);
+			ctx.fillRect(5, 153 + 30*c, 88, 32);
 		}
 		ctx.fillStyle = "white";
 		ctx.font="12px Aldrich";
-		ctx.fillText(this.crew[c].name, 27, 150 + 30*c);
+		ctx.fillText(this.crew[c].name, 27, 170 + 30*c);
 		ctx.fillStyle = this.crew[c].color;
-		ctx.fillRect(15, 142 + 30*c, this.crew[c].w / 2, this.crew[c].h / 2)
+		ctx.fillRect(15, 162 + 30*c, this.crew[c].w / 2, this.crew[c].h / 2)
 		ctx.fillStyle = "rgba(255,255,255,0.25)";
-		ctx.fillRect(27, 154 + 30*c, 60, 5);
-		ctx.fillStyle = "green";
-		ctx.fillRect(27, 154 + 30*c, 60 * ship.crew[c].hp / ship.crew[c].hpMax, 5);
+		ctx.fillRect(27, 174 + 30*c, 60, 3);
+		ctx.fillRect(27, 178 + 30*c, 60, 3);
+		if (ship.crew[c].hp < ship.crew[c].hpMax / 2) ctx.fillStyle = "red";
+		else if (ship.crew[c].hp < ship.crew[c].hpMax) ctx.fillStyle = "yellow";
+		else ctx.fillStyle = "green";
+		ctx.fillRect(27, 174 + 30*c, 60 * ship.crew[c].hp / ship.crew[c].hpMax, 3);
+		ctx.fillStyle = "cyan";
+		ctx.fillRect(27, 178 + 30*c, 60 * ship.crew[c].air / ship.crew[c].airMax, 3);
 	}
+	
+	var startY = 160 + this.crew.length*30;
+	
+	ctx.fillStyle = "rgba(50,50,50,0.75)";
+	ctx.fillRect(5, startY, 41, 41);
+	ctx.fillStyle = "white";
+	ctx.beginPath;
+	ctx.moveTo(10, startY + 5);
+	ctx.lineTo(15, startY + 5);
+	ctx.lineTo(15, startY + 15);
+	ctx.lineTo(31, startY + 15);
+	ctx.lineTo(31, startY + 5);
+	ctx.lineTo(36, startY + 5);
+	ctx.lineTo(41, startY + 10);
+	ctx.lineTo(41, startY + 20);
+	ctx.lineTo(10, startY + 20);
+	ctx.fill();
+	ctx.beginPath;
+	ctx.moveTo(10, startY + 20);
+	ctx.lineTo(15, startY + 20);
+	ctx.lineTo(15, startY + 31);
+	ctx.lineTo(36, startY + 31);
+	ctx.lineTo(36, startY + 20);
+	ctx.lineTo(41, startY + 20);
+	ctx.lineTo(41, startY + 36);
+	ctx.lineTo(10, startY + 36);
+	ctx.fill();
+	ctx.strokeStyle = "white";
+	ctx.lineWidth = 2;
+	ctx.beginPath();
+	ctx.moveTo(18, startY + 23);
+	ctx.lineTo(33, startY + 23);
+	ctx.stroke();
+	ctx.beginPath();
+	ctx.moveTo(18, startY + 26);
+	ctx.lineTo(33, startY + 26);
+	ctx.stroke();
+	
+	ctx.fillStyle = "rgba(50,50,50,0.75)";
+	ctx.fillRect(52, startY, 41, 41);
+	
+	ctx.strokeStyle = "white";
+	ctx.lineWidth = 3;
+	ctx.beginPath();
+	ctx.moveTo(56, startY + 20);
+	ctx.lineTo(89, startY + 20);
+	ctx.stroke();
+	ctx.beginPath();
+	ctx.moveTo(55, startY + 19);
+	ctx.lineTo(61, startY + 25);
+	ctx.stroke();
+	ctx.beginPath();
+	ctx.moveTo(55, startY + 21);
+	ctx.lineTo(61, startY + 15);
+	ctx.stroke();
+	ctx.beginPath();
+	ctx.moveTo(90, startY + 19);
+	ctx.lineTo(84, startY + 25);
+	ctx.stroke();
+	ctx.beginPath();
+	ctx.moveTo(90, startY + 21);
+	ctx.lineTo(84, startY + 15);
+	ctx.stroke();
+	ctx.beginPath();
+	ctx.moveTo(72, startY + 4);
+	ctx.lineTo(72, startY + 37);
+	ctx.stroke();
+	ctx.beginPath();
+	ctx.moveTo(73, startY + 3);
+	ctx.lineTo(66, startY + 9);
+	ctx.stroke();
+	ctx.beginPath();
+	ctx.moveTo(71, startY + 3);
+	ctx.lineTo(78, startY + 9);
+	ctx.stroke();
+	ctx.beginPath();
+	ctx.moveTo(73, startY + 38);
+	ctx.lineTo(66, startY + 32);
+	ctx.stroke();
+	ctx.beginPath();
+	ctx.moveTo(71, startY + 38);
+	ctx.lineTo(78, startY + 32);
+	ctx.stroke();
 }
 
 //denotes connections between each square and how far it is from every other square
@@ -584,19 +817,19 @@ var rooms = [
 	new Room(210, 160, 40, 80, "A", ["a3", "a4"]),
 	new Room(270, 160, 80, 80, "B", ["b3", "b4", "c3", "c4"], "engine"),
 	new Room(270, 100, 80, 40, "C", ["b2", "c2"], "drain"),
-	new Room(270, 220, 80, 40, "D", ["b5", "c5"]),
+	new Room(270, 220, 80, 40, "D", ["b5", "c5"], "teleport"),
 	new Room(350, 100, 80, 40, "E", ["d2", "e2"]),
 	new Room(350, 220, 80, 40, "F", ["d5", "e5"]),
 	new Room(390, 160, 80, 80, "G", ["e3", "e4", "f3", "f4"], "weapons"),
 	new Room(470, 120, 80, 80, "H", ["g2", "g3", "h2", "h3"]),
-	new Room(470, 200, 80, 80, "I", ["g4", "g5", "h4", "h5"]),
+	new Room(470, 200, 80, 80, "I", ["g4", "g5", "h4", "h5"], "cloak"),
 	new Room(470,  60, 80, 40, "J", ["g1", "h1"]),
 	new Room(470, 260, 80, 40, "K", ["g6", "h6"]),
 	new Room(550, 120, 80, 80, "L", ["i2", "i3", "j2", "j3"], "medbay"),
 	new Room(550, 200, 80, 80, "M", ["i4", "i5", "j4", "j5"]),
 	new Room(630, 140, 80, 40, "N", ["k3", "l3"], "doors"),
 	new Room(630, 180, 80, 40, "O", ["k4", "l4"], "sonar"),
-	new Room(710, 160, 80, 80, "P", ["m3", "m4", "n3", "n4"]),
+	new Room(710, 160, 80, 80, "P", ["m3", "m4", "n3", "n4"], "drones"),
 	new Room(770, 160, 40, 80, "Q", ["o3", "o4"], "pilot")
 ];
 
@@ -617,8 +850,44 @@ var doors = [
 	new Door(450, 280, "h", ["g6", null]), new Door(490, 280, "h", ["h6", null])
 ];
 
-var ship = new Ship("test", grid, rooms, [new CrewMember(210, 140, "a3", "cyan"), new CrewMember(250, 140, "b3"), new CrewMember(290, 140, "c3", "yellow")], doors);
+var ship = new Ship("test", grid, rooms, [new CrewMember(770, 140, "o3", "cyan"), new CrewMember(370, 140, "e3"), new CrewMember(250, 140, "b3", "yellow")], doors);
 ship.path();
+
+
+//BUBBLES
+//bubbles for aesthetics
+function Bubble () {
+	this.x = Math.floor(Math.random() * 1200);
+	this.y = Math.floor(Math.random() * 600);
+	this.v = Math.floor(Math.random() * 3);
+	this.z = Math.floor(Math.random() * 40);
+	this.r = Math.round(Math.pow(Math.random(), 2)) + 1;
+}
+
+Bubble.prototype.update = function () {
+	this.x -= this.v;
+	
+	this.z++;
+	if (this.z > 40) {
+		this.x = Math.floor(Math.random() * 1200);
+		this.y = Math.floor(Math.random() * 600);
+		this.z = 0;
+		this.r = Math.floor(Math.random() * 3) + 1;
+	}
+}
+
+Bubble.prototype.draw = function () {
+	ctx.fillStyle = "rgba(255, 255, 255, "+(Math.sin(this.z * Math.PI / 40) / 6)+")";
+	ctx.beginPath();
+	ctx.arc(this.x, this.y, this.r+(Math.sin(this.z * Math.PI / 80) * 2), 0, Math.PI * 2, false);
+	ctx.fill();
+}
+
+var bubbles = [];
+
+for (b = 0; b < 100; b++) {
+	bubbles[b] = new Bubble();
+}
 
 
 //DRAW
@@ -626,7 +895,7 @@ setInterval(draw, 10);
 frame = 0;
 function draw() {
 	ctx.fillStyle = "#005";
-	ctx.fillRect(0, 0, 1000, 600);
+	ctx.fillRect(0, 0, 1200, 600);
 	
 	ship.draw();
 	if (frame % 5 == 0) ship.update();
@@ -699,52 +968,71 @@ document.onmousedown = function(e) {
 	if (mode == "move" && !handled) {
 		for (r = 0; r < ship.rooms.length; r++) {
 			if (mouseX > ship.rooms[r].x - ship.rooms[r].w / 2 && mouseX < ship.rooms[r].x + ship.rooms[r].w / 2 && mouseY > ship.rooms[r].y - ship.rooms[r].h / 2 && mouseY < ship.rooms[r].y + ship.rooms[r].h / 2) {
-				for (s = 0; s < ship.rooms[r].squares.length; s++) {
-					var occupied = false;
-					for (c = 0; c < ship.crew.length; c++) {
-						if (c != selected && ((ship.crew[c].location == ship.rooms[r].squares[s] && ship.crew[c].target == ship.rooms[r].squares[s]) || ship.crew[c].goal == ship.rooms[r].squares[s])) {
-							occupied = true;
-							break;
+				if (ship.rooms[r].squares.indexOf(ship.crew[selected].location) < 0) {
+					for (s = 0; s < ship.rooms[r].squares.length; s++) {
+						var occupied = false;
+						for (c = 0; c < ship.crew.length; c++) {
+							if ((ship.crew[c].location == ship.rooms[r].squares[s] && ship.crew[c].target == ship.rooms[r].squares[s]) || ship.crew[c].goal == ship.rooms[r].squares[s]) {
+								occupied = true;
+								break;
+							}
 						}
-					}
-					if (!occupied) {
-						ship.crew[selected].goal = ship.rooms[r].squares[s];
-						for (m = 0; m < ship.rooms.length; m++) {
-							if (ship.rooms[m].squares[0] == ship.crew[selected].location) {
-								if (ship.rooms[m].system != null) {
-									for (p = 1; p < ship.rooms[m].squares.length; p++) {
-										var assigned = false;
-										for (c = 0; c < ship.crew.length; c++) {
-											if (ship.rooms[m].squares[p] == ship.crew[c].location && ship.rooms[m].squares[p] == ship.crew[c].target) {
-												ship.crew[c].goal = ship.rooms[m].squares[0];
-												ship.crew[c].auto = true;
-												assigned = true;
-												break;
-											}
-										}
-										if (assigned) break;
-										else {
+						if (!occupied) {
+							ship.crew[selected].goal = ship.rooms[r].squares[s];
+							for (m = 0; m < ship.rooms.length; m++) {
+								if (ship.rooms[m].squares[0] == ship.crew[selected].location) {
+									if (ship.rooms[m].system != null) {
+										for (p = 1; p < ship.rooms[m].squares.length; p++) {
+											var assigned = false;
 											for (c = 0; c < ship.crew.length; c++) {
-												if (ship.rooms[m].squares[p] == ship.crew[c].goal) {
+												if (ship.rooms[m].squares[p] == ship.crew[c].location && ship.rooms[m].squares[p] == ship.crew[c].target) {
 													ship.crew[c].goal = ship.rooms[m].squares[0];
+													ship.crew[c].auto = true;
 													assigned = true;
 													break;
 												}
 											}
+											if (assigned) break;
+											else {
+												for (c = 0; c < ship.crew.length; c++) {
+													if (ship.rooms[m].squares[p] == ship.crew[c].goal) {
+														ship.crew[c].goal = ship.rooms[m].squares[0];
+														assigned = true;
+														break;
+													}
+												}
+											}
+											if (assigned) break;
 										}
-										if (assigned) break;
 									}
+									break;
 								}
-								break;
 							}
+							break;
 						}
-						break;
 					}
 				}
 				mode = "normal";
 				handled = true;
 				break;
 			}
+		}
+	}
+	
+	
+	//ctx.fillRect(5, startY, 41, 41);
+	//var startY = 160 + this.crew.length*30;
+	
+	if (mode == "normal" && mouseX > 5 && mouseX < 46 && mouseY > 160 + ship.crew.length*30 && mouseY < 201 + ship.crew.length*30) {
+		for (c = 0; c < ship.crew.length; c++) {
+			if (ship.crew[c].location == ship.crew[c].target) ship.crew[c].station = ship.crew[c].location;
+			else ship.crew[c].station = ship.crew[c].goal;
+		}
+	}
+	
+	if (mode == "normal" && mouseX > 52 && mouseX < 93 && mouseY > 160 + ship.crew.length*30 && mouseY < 201 + ship.crew.length*30) {
+		for (c = 0; c < ship.crew.length; c++) {
+			if (!(ship.crew[c].location == ship.crew[c].station && ship.crew[c].target == ship.crew[c].station)) ship.crew[c].goal = ship.crew[c].station;
 		}
 	}
 }
