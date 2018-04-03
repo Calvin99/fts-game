@@ -265,7 +265,7 @@ Room.prototype.update = function () {
 	}
 	if (this.system == "drain") {
 		for (s = 0; s < ship.grid.length; s++) {
-			if (ship.grid[s].water > 0) ship.grid[s].water -= 0.01;
+			if (ship.grid[s].water > 0) ship.grid[s].water -= 0.02;
 			if (ship.grid[s].water < 0) ship.grid[s].water = 0;
 		}
 	}	
@@ -669,7 +669,7 @@ Ship.prototype.draw = function () {
 	ctx.fillStyle = "rgba(50,50,50,0.75)";
 	ctx.fillRect(5, startY, 41, 41);
 	ctx.fillStyle = "white";
-	ctx.beginPath;
+	ctx.beginPath();
 	ctx.moveTo(10, startY + 5);
 	ctx.lineTo(15, startY + 5);
 	ctx.lineTo(15, startY + 15);
@@ -906,23 +906,69 @@ function draw() {
 	
 	if (paused) {
 		ctx.fillStyle = "rgba(0,0,0,0.4)";
-		ctx.fillRect(0, 0, 1000, 250);
-		ctx.fillRect(0, 250, 465, 100);
-		ctx.fillRect(490, 250, 20, 100);
-		ctx.fillRect(535, 250, 465, 100);
-		ctx.fillRect(0, 350, 1000, 250);
+		ctx.fillRect(0, 0, 1200, 250);
+		ctx.fillRect(0, 250, 565, 100);
+		ctx.fillRect(590, 250, 20, 100);
+		ctx.fillRect(635, 250, 565, 100);
+		ctx.fillRect(0, 350, 1200, 250);
 		ctx.fillStyle = "rgba(255,255,255,0.4)";
-		ctx.fillRect(465, 250, 25, 100);
-		ctx.fillRect(510, 250, 25, 100);
+		ctx.fillRect(565, 250, 25, 100);
+		ctx.fillRect(610, 250, 25, 100);
 	}
 	
-	ctx.fillStyle = "#000";
-	ctx.fillRect(mouseX - 3, mouseY - 7, 6, 14);
-	ctx.fillRect(mouseX - 7, mouseY - 3, 14, 6);
-	if (mode == "normal") ctx.fillStyle = "#fff";
-	if (mode == "move") ctx.fillStyle = "#0a0";
-	ctx.fillRect(mouseX - 1, mouseY - 5, 2, 10);
-	ctx.fillRect(mouseX - 5, mouseY - 1, 10, 2);
+	if (mode == "normal") {
+		ctx.fillStyle = "#000";
+		ctx.fillRect(mouseX - 3, mouseY - 7, 6, 14);
+		ctx.fillRect(mouseX - 7, mouseY - 3, 14, 6);
+		ctx.fillStyle = "#fff";
+		ctx.fillRect(mouseX - 1, mouseY - 5, 2, 10);
+		ctx.fillRect(mouseX - 5, mouseY - 1, 10, 2);
+	}
+	else if (mode == "move") { 
+		ctx.fillStyle = "#000";
+		ctx.fillRect(mouseX - 3, mouseY - 7, 6, 14);
+		ctx.fillRect(mouseX - 7, mouseY - 3, 14, 6);
+		ctx.fillStyle = "#0a0";
+		ctx.fillRect(mouseX - 1, mouseY - 5, 2, 10);
+		ctx.fillRect(mouseX - 5, mouseY - 1, 10, 2);
+	}
+	else if (mode == "water") {
+		var fill;
+		for (s = 0; s < ship.grid.length; s++) {
+			if (mouseX > ship.grid[s].x - ship.grid[s].w / 2 - 1 && mouseX < ship.grid[s].x + ship.grid[s].w / 2 + 1 && mouseY > ship.grid[s].y - ship.grid[s].h / 2 - 1 && mouseY < ship.grid[s].y + ship.grid[s].h / 2 + 1) {
+				fill = ship.grid[s].water;
+				break;
+			}
+		}
+		ctx.fillStyle = "black";
+		ctx.strokeStyle = "black";
+		ctx.lineWidth = 2;
+		ctx.beginPath();
+		ctx.arc(mouseX, mouseY, 3, 0, Math.PI * 2, false);
+		ctx.fill();
+		ctx.beginPath();
+		ctx.moveTo(mouseX, mouseY);
+		ctx.lineTo(mouseX + 10, mouseY);
+		ctx.stroke();
+		ctx.fillRect(mouseX + 10, mouseY - 30, 8, 60);
+		
+		ctx.fillStyle = "blue";
+		ctx.fillRect(mouseX + 10, mouseY + 30 - fill * 6, 8, fill * 6);
+		
+		ctx.strokeStyle = "white";
+		ctx.beginPath();
+		ctx.moveTo(mouseX + 14, mouseY + 15);
+		ctx.lineTo(mouseX + 18, mouseY + 15);
+		ctx.stroke();
+		ctx.beginPath();
+		ctx.moveTo(mouseX + 14, mouseY);
+		ctx.lineTo(mouseX + 18, mouseY);
+		ctx.stroke();
+		ctx.beginPath();
+		ctx.moveTo(mouseX + 14, mouseY - 15);
+		ctx.lineTo(mouseX + 18, mouseY - 15);
+		ctx.stroke();
+	}
 	
 	frame++;
 }
@@ -1043,4 +1089,13 @@ document.onkeydown = function(e) {
     e.preventDefault();
     
     if (key === 32) paused = !paused;
+    else if (key ===16) mode = "water";
+}
+
+document.onkeyup = function(e) {
+    e = window.event || e;
+    var key = e.keyCode;
+    e.preventDefault();
+    
+    if (key ===16) mode = "normal";
 }
