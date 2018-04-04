@@ -1020,6 +1020,20 @@ function draw() {
 	if (frame % 5 == 0) ship.update();
 	ship.draw();
 	
+	ctx.fillStyle = "rgba(255,100,100,0.5)";
+	ctx.beginPath();
+	ctx.moveTo(780, 560);
+	ctx.lineTo(780, 130);
+	ctx.lineTo(840, 70);
+	ctx.lineTo(1160, 70);
+	ctx.lineTo(1160, 500);
+	ctx.lineTo(1100, 560);
+	ctx.lineTo(780, 560);
+	ctx.fill();
+	ctx.strokeStyle = "red";
+	ctx.lineWidth = 2;
+	ctx.stroke();
+	
 	/*ctx.globalAlpha = 0.1;
     ctx.drawImage(kestrelImg, 13, 25, kestrelImg.width * 1.15, kestrelImg.height * 1.15);
 	ctx.globalAlpha = 1;*/
@@ -1059,6 +1073,7 @@ function draw() {
 				fill = ship.grid[s].water;
 				break;
 			}
+			if (s == ship.grid.length - 1) fill = 10;
 		}
 		ctx.fillStyle = "black";
 		ctx.strokeStyle = "black";
