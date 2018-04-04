@@ -859,61 +859,61 @@ Ship.prototype.path = function () {
 //6                   [K][K]
 
 var grid = [
-	new Square(160, 240, "a3", "A"), new Square(160, 280, "a4", "A"),
-	new Square(200, 200, "b2", "C"), new Square(200, 240, "b3", "B"), new Square(200, 280, "b4", "B"), new Square(200, 320, "b5", "D"),
-	new Square(240, 200, "c2", "C"), new Square(240, 240, "c3", "B"), new Square(240, 280, "c4", "B"), new Square(240, 320, "c5", "D"),
-	new Square(280, 200, "d2", "E"), new Square(280, 320, "d5", "F"),
-	new Square(320, 200, "e2", "E"), new Square(320, 240, "e3", "G"), new Square(320, 280, "e4", "G"), new Square(320, 320, "e5", "F"),
-	new Square(360, 240, "f3", "G"), new Square(360, 280, "f4", "G"),
-	new Square(400, 160, "g1", "J"), new Square(400, 200, "g2", "H"), new Square(400, 240, "g3", "H"), new Square(400, 280, "g4", "I"), new Square(400, 320, "g5", "I"), new Square(400, 360, "g6", "K"),
-	new Square(440, 160, "h1", "J"), new Square(440, 200, "h2", "H"), new Square(440, 240, "h3", "H"), new Square(440, 280, "h4", "I"), new Square(440, 320, "h5", "I"), new Square(440, 360, "h6", "K"),
-	new Square(480, 200, "i2", "L"), new Square(480, 240, "i3", "L"), new Square(480, 280, "i4", "M"), new Square(480, 320, "i5", "M"),
-	new Square(520, 200, "j2", "L"), new Square(520, 240, "j3", "L"), new Square(520, 280, "j4", "M"), new Square(520, 320, "j5", "M"),
-	new Square(560, 240, "k3", "N"), new Square(560, 280, "k4", "O"),
-	new Square(600, 240, "l3", "N"), new Square(600, 280, "l4", "O"),
-	new Square(640, 240, "m3", "P"), new Square(640, 280, "m4", "P"),
-	new Square(680, 240, "n3", "P"), new Square(680, 280, "n4", "P"),
-	new Square(720, 240, "o3", "Q"), new Square(720, 280, "o4", "Q")
+	new Square(160, 280, "a3", "A"), new Square(160, 320, "a4", "A"),
+	new Square(200, 240, "b2", "C"), new Square(200, 280, "b3", "B"), new Square(200, 320, "b4", "B"), new Square(200, 360, "b5", "D"),
+	new Square(240, 240, "c2", "C"), new Square(240, 280, "c3", "B"), new Square(240, 320, "c4", "B"), new Square(240, 360, "c5", "D"),
+	new Square(280, 240, "d2", "E"), new Square(280, 360, "d5", "F"),
+	new Square(320, 240, "e2", "E"), new Square(320, 280, "e3", "G"), new Square(320, 320, "e4", "G"), new Square(320, 360, "e5", "F"),
+	new Square(360, 280, "f3", "G"), new Square(360, 320, "f4", "G"),
+	new Square(400, 200, "g1", "J"), new Square(400, 240, "g2", "H"), new Square(400, 280, "g3", "H"), new Square(400, 320, "g4", "I"), new Square(400, 360, "g5", "I"), new Square(400, 400, "g6", "K"),
+	new Square(440, 200, "h1", "J"), new Square(440, 240, "h2", "H"), new Square(440, 280, "h3", "H"), new Square(440, 320, "h4", "I"), new Square(440, 360, "h5", "I"), new Square(440, 400, "h6", "K"),
+	new Square(480, 240, "i2", "L"), new Square(480, 280, "i3", "L"), new Square(480, 320, "i4", "M"), new Square(480, 360, "i5", "M"),
+	new Square(520, 240, "j2", "L"), new Square(520, 280, "j3", "L"), new Square(520, 320, "j4", "M"), new Square(520, 360, "j5", "M"),
+	new Square(560, 280, "k3", "N"), new Square(560, 320, "k4", "O"),
+	new Square(600, 280, "l3", "N"), new Square(600, 320, "l4", "O"),
+	new Square(640, 280, "m3", "P"), new Square(640, 320, "m4", "P"),
+	new Square(680, 280, "n3", "P"), new Square(680, 320, "n4", "P"),
+	new Square(720, 280, "o3", "Q"), new Square(720, 320, "o4", "Q")
 ];
 
 var rooms = [
-	new Room(160, 260, 40, 80, "A", ["a3", "a4"]),
-	new Room(220, 260, 80, 80, "B", ["b3", "b4", "c3", "c4"], "engine"),
-	new Room(220, 200, 80, 40, "C", ["b2", "c2"], "drain"),
-	new Room(220, 320, 80, 40, "D", ["b5", "c5"], "teleport"),
-	new Room(300, 200, 80, 40, "E", ["d2", "e2"]),
-	new Room(300, 320, 80, 40, "F", ["d5", "e5"]),
-	new Room(340, 260, 80, 80, "G", ["e3", "e4", "f3", "f4"], "weapons"),
-	new Room(420, 220, 80, 80, "H", ["g2", "g3", "h2", "h3"]),
-	new Room(420, 300, 80, 80, "I", ["g4", "g5", "h4", "h5"], "cloak"),
-	new Room(420, 160, 80, 40, "J", ["g1", "h1"]),
-	new Room(420, 360, 80, 40, "K", ["g6", "h6"]),
-	new Room(500, 220, 80, 80, "L", ["i2", "i3", "j2", "j3"], "medbay"),
-	new Room(500, 300, 80, 80, "M", ["i4", "i5", "j4", "j5"]),
-	new Room(580, 240, 80, 40, "N", ["k3", "l3"], "doors"),
-	new Room(580, 280, 80, 40, "O", ["k4", "l4"], "sonar"),
-	new Room(660, 260, 80, 80, "P", ["m3", "m4", "n3", "n4"], "drones"),
-	new Room(720, 260, 40, 80, "Q", ["o3", "o4"], "pilot")
+	new Room(160, 300, 40, 80, "A", ["a3", "a4"]),
+	new Room(220, 300, 80, 80, "B", ["b3", "b4", "c3", "c4"], "engine"),
+	new Room(220, 240, 80, 40, "C", ["b2", "c2"], "drain"),
+	new Room(220, 360, 80, 40, "D", ["b5", "c5"], "teleport"),
+	new Room(300, 240, 80, 40, "E", ["d2", "e2"]),
+	new Room(300, 360, 80, 40, "F", ["d5", "e5"]),
+	new Room(340, 300, 80, 80, "G", ["e3", "e4", "f3", "f4"], "weapons"),
+	new Room(420, 260, 80, 80, "H", ["g2", "g3", "h2", "h3"]),
+	new Room(420, 340, 80, 80, "I", ["g4", "g5", "h4", "h5"], "cloak"),
+	new Room(420, 200, 80, 40, "J", ["g1", "h1"]),
+	new Room(420, 400, 80, 40, "K", ["g6", "h6"]),
+	new Room(500, 260, 80, 80, "L", ["i2", "i3", "j2", "j3"], "medbay"),
+	new Room(500, 340, 80, 80, "M", ["i4", "i5", "j4", "j5"]),
+	new Room(580, 280, 80, 40, "N", ["k3", "l3"], "doors"),
+	new Room(580, 320, 80, 40, "O", ["k4", "l4"], "sonar"),
+	new Room(660, 300, 80, 80, "P", ["m3", "m4", "n3", "n4"], "drones"),
+	new Room(720, 300, 40, 80, "Q", ["o3", "o4"], "pilot")
 ];
 
 var doors = [
-	new Door(180, 240, "v", ["a3", "b3"]), new Door(180, 280, "v", ["a4", "b4"]),
-	new Door(240, 220, "h", ["c2", "c3"]), new Door(240, 300, "h", ["c4", "c5"]),
-	new Door(260, 200, "v", ["c2", "d2"]), new Door(260, 320, "v", ["c5", "d5"]),
-	new Door(320, 220, "h", ["e2", "e3"]), new Door(320, 300, "h", ["e4", "e5"]),
-	new Door(380, 240, "v", ["f3", "g3"]), new Door(380, 280, "v", ["f4", "g4"]),
-	new Door(440, 180, "h", ["h1", "h2"]), new Door(440, 340, "h", ["h5", "h6"]),
-	new Door(460, 200, "v", ["h2", "i2"]), new Door(460, 320, "v", ["h5", "i5"]),
-	new Door(480, 260, "h", ["i3", "i4"]),
-	new Door(540, 240, "v", ["j3", "k3"]), new Door(540, 280, "v", ["j4", "k4"]),
-	new Door(620, 240, "v", ["l3", "m3"]), new Door(620, 280, "v", ["l4", "m4"]),
-	new Door(700, 280, "v", ["n4", "o4"]),
-	new Door(140, 240, "v", ["a3", null]), new Door(140, 280, "v", ["a4", null]),
-	new Door(400, 140, "h", ["g1", null]), new Door(440, 140, "h", ["h1", null]),
-	new Door(400, 380, "h", ["g6", null]), new Door(440, 380, "h", ["h6", null])
+	new Door(180, 280, "v", ["a3", "b3"]), new Door(180, 320, "v", ["a4", "b4"]),
+	new Door(240, 260, "h", ["c2", "c3"]), new Door(240, 340, "h", ["c4", "c5"]),
+	new Door(260, 240, "v", ["c2", "d2"]), new Door(260, 360, "v", ["c5", "d5"]),
+	new Door(320, 260, "h", ["e2", "e3"]), new Door(320, 340, "h", ["e4", "e5"]),
+	new Door(380, 280, "v", ["f3", "g3"]), new Door(380, 320, "v", ["f4", "g4"]),
+	new Door(440, 220, "h", ["h1", "h2"]), new Door(440, 380, "h", ["h5", "h6"]),
+	new Door(460, 240, "v", ["h2", "i2"]), new Door(460, 360, "v", ["h5", "i5"]),
+	new Door(480, 300, "h", ["i3", "i4"]),
+	new Door(540, 280, "v", ["j3", "k3"]), new Door(540, 320, "v", ["j4", "k4"]),
+	new Door(620, 280, "v", ["l3", "m3"]), new Door(620, 320, "v", ["l4", "m4"]),
+	new Door(700, 320, "v", ["n4", "o4"]),
+	new Door(140, 280, "v", ["a3", null]), new Door(140, 320, "v", ["a4", null]),
+	new Door(400, 180, "h", ["g1", null]), new Door(440, 180, "h", ["h1", null]),
+	new Door(400, 420, "h", ["g6", null]), new Door(440, 420, "h", ["h6", null])
 ];
 
-var ship = new Ship("test", grid, rooms, [new CrewMember(720, 240, "o3", "cyan"), new CrewMember(320, 240, "e3"), new CrewMember(200, 240, "b3", "yellow"), new CrewMember(560, 280, "k4", "magenta", "Matt")], doors);
+var ship = new Ship("test", grid, rooms, [new CrewMember(720, 280, "o3", "cyan"), new CrewMember(320, 280, "e3"), new CrewMember(200, 280, "b3", "yellow"), new CrewMember(560, 320, "k4", "magenta", "Matt")], doors);
 ship.path();
 
 
