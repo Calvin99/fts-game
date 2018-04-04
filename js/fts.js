@@ -136,7 +136,7 @@ CrewMember.prototype.update = function() {
 			}
 		}
 		
-		if (this.xspd != 0 && this.yspd != 0) {
+		if (this.x != this.xtarget && this.y != this.ytarget) {
 			spdMod *= Math.pow(2, 0.5) / 2;
 		}
 		
@@ -552,9 +552,6 @@ function Ship (id, grid, rooms, crew, doors) {
 
 //updates ship's contents
 Ship.prototype.update = function () {
-	for (b = 0; b < bubbles.length; b++) {
-		bubbles[b].update();
-	}
 	for (d = 0; d < this.doors.length; d++) {
 		this.doors[d].update();
 	}
@@ -599,9 +596,6 @@ Ship.prototype.update = function () {
 
 //displays entire ship and contents
 Ship.prototype.draw = function () {
-	for (b = 0; b < bubbles.length; b++) {
-		bubbles[b].draw();
-	}
 	for (s = 0; s < this.grid.length; s++) {
 		this.grid[s].draw();
 	}
@@ -849,14 +843,15 @@ Ship.prototype.path = function () {
 	}
 }
 
-//Design of the kestrel from FTL
-//   A  B  C  D  E  F  G  H  I  J  K  L  M  N  O
-//1                   [J][J]
-//2    [C][C][E][E]   [H][H][L][L]
-//3 [A][B][B]   [G][G][H][H][L][L][N][N][P][P][Q]
-//4 [A][B][B]   [G][G][I][I][M][M][O][O][P][P][Q]
-//5    [D][D][F][F]   [I][I][M][M]
-//6                   [K][K]
+/*Design of the kestrel from FTL
+0  A  B  C  D  E  F  G  H  I  J  K  L  M  N  O
+1                   [J][J]
+2    [C][C][E][E]   [H][H][L][L]
+3 [A][B][B]   [G][G][H][H][L][L][N][N][P][P][Q]
+4 [A][B][B]   [G][G][I][I][M][M][O][O][P][P][Q]
+5    [D][D][F][F]   [I][I][M][M]
+6                   [K][K]
+*/
 
 var grid = [
 	new Square(160, 280, "a3", "A"), new Square(160, 320, "a4", "A"),
@@ -972,12 +967,61 @@ function draw() {
 		ctx.ellipse(600, 300, i*6, i*3, 0, 0, Math.PI*2);
 		ctx.fill();
 	}
+		
+	for (b = 0; b < bubbles.length; b++) {
+		if (frame % 5 == 0 && !paused) bubbles[b].update();
+		bubbles[b].draw();
+	}
+	
+	ctx.fillStyle = "#555";
+	ctx.beginPath();
+	ctx.moveTo(138, 255);
+	ctx.lineTo(175, 215);
+	ctx.lineTo(128, 215);
+	ctx.lineTo(108, 195);
+	ctx.lineTo(108, 155);
+	ctx.lineTo(128, 135);
+	ctx.lineTo(355, 135);
+	ctx.lineTo(375, 155);
+	ctx.lineTo(375, 178);
+	ctx.lineTo(465, 178);
+	ctx.lineTo(545, 215);
+	ctx.lineTo(742, 255);
+	ctx.lineTo(742, 345);
+	ctx.lineTo(545, 385);
+	ctx.lineTo(465, 422);
+	ctx.lineTo(375, 422);
+	ctx.lineTo(375, 445);
+	ctx.lineTo(355, 465);
+	ctx.lineTo(128, 465);
+	ctx.lineTo(108, 445);
+	ctx.lineTo(108, 405);
+	ctx.lineTo(128, 385);
+	ctx.lineTo(175, 385);
+	ctx.lineTo(138, 345);
+	ctx.lineTo(138, 255);
+	ctx.fill();
+	ctx.strokeStyle = "black";
+	ctx.lineWidth = 3;
+	ctx.stroke();
+	ctx.beginPath();
+	ctx.moveTo(175, 215);
+	ctx.lineTo(355, 215);
+	ctx.lineTo(375, 195);
+	ctx.lineTo(375, 178);
+	ctx.stroke();
+	ctx.beginPath();
+	ctx.moveTo(175, 385);
+	ctx.lineTo(355, 385);
+	ctx.lineTo(375, 405);
+	ctx.lineTo(375, 445);
+	ctx.stroke();
 	
 	if (frame % 5 == 0) ship.update();
 	ship.draw();
 	
-	/*ctx.globalAlpha = 0.25;
-    ctx.drawImage(kestrelImg, 63, -115, kestrelImg.width * 1.15, kestrelImg.height * 1.15);
+	/*ctx.globalAlpha = 0.1;
+    ctx.drawImage(kestrelImg, 13, 25, kestrelImg.width * 1.15, kestrelImg.height * 1.15);
 	ctx.globalAlpha = 1;*/
 	
 	if (paused) {
@@ -1108,7 +1152,7 @@ document.onmousedown = function(e) {
 										for (p = 1; p < ship.rooms[m].squares.length; p++) {
 											var assigned = false;
 											for (c = 0; c < ship.crew.length; c++) {
-												if (ship.rooms[m].squares[p] == ship.crew[c].location && ship.rooms[m].squares[p] == ship.crew[c].target) {
+												if (ship.rooms[m].squares[p] == ship.crew[c].location && ship.rooms[m].squares[p] == ship.crew[c].target && ship.crew[c].goal == null) {
 													ship.crew[c].goal = ship.rooms[m].squares[0];
 													ship.crew[c].auto = true;
 													assigned = true;
