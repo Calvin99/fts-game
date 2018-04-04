@@ -34,7 +34,7 @@ function joinArr (a, b) {
 var names = ["Bob", "Joe", "Frank", "Anne", "Jill", "Carol"];
 
 //player controlled crew members
-function CrewMember (x, y, location, color) {
+function CrewMember (x, y, location, color, name) {
 	this.x = x;
 	this.y = y;
 	
@@ -57,10 +57,10 @@ function CrewMember (x, y, location, color) {
 	
 	this.station = location;
 	
-	this.xspd = 4;
-	this.yspd = 4;
+	this.xspd = 5;
+	this.yspd = 5;
 	
-	this.name = names.splice(Math.floor(Math.random() * names.length), 1);
+	this.name = name || names.splice(Math.floor(Math.random() * names.length), 1);
 	this.hp = 100;
 	this.hpMax = 100;
 	
@@ -68,8 +68,8 @@ function CrewMember (x, y, location, color) {
 	this.airMax = 100;
 	
 	this.pilot = 0;
-	this.engines = 0;
-	this.weapons = 0;
+	this.engine = 0;
+	this.weapon = 0;
 	this.repair = 0;
 	this.sonar = 0;
 }
@@ -112,10 +112,18 @@ CrewMember.prototype.update = function() {
 			this.target = null;
 			for (s = 0; s < ship.grid.length; s++) {
 				if (ship.grid[s].id == this.location) {
+					for (p = 0; p < ship.grid.length; p++) {
+						if (p != s && ship.grid[s].connections[0].indexOf(ship.grid[p].id) >= 0 && ship.grid[p].id == this.goal) {
+							this.target = ship.grid[p].id;
+							this.xtarget = ship.grid[p].x;
+							this.ytarget = ship.grid[p].y;
+							break;
+						}
+					}
 					var i = 0
 					while (this.target == null) {
 						for (p = 0; p < ship.grid.length; p++) {
-							if (p != s && ship.grid[s].connections[0].indexOf(ship.grid[p].id) >= 0 && (ship.grid[p].connections[i].indexOf(this.goal) >= 0 || ship.grid[p].id == this.goal) && ship.grid[s].blacklist.indexOf(ship.grid[p].id) < 0) {
+							if (p != s && ship.grid[s].connections[0].indexOf(ship.grid[p].id) >= 0 && (ship.grid[p].connections[i].indexOf(this.goal) >= 0) && ship.grid[s].blacklist.indexOf(ship.grid[p].id) < 0) {
 								this.target = ship.grid[p].id;
 								this.xtarget = ship.grid[p].x;
 								this.ytarget = ship.grid[p].y;
@@ -128,11 +136,20 @@ CrewMember.prototype.update = function() {
 			}
 		}
 		
+		if (this.xspd != 0 && this.yspd != 0) {
+			spdMod *= Math.pow(2, 0.5) / 2;
+		}
+		
 		//updates location of the crew member
 		if (this.x > this.xtarget) this.x -= this.xspd * spdMod;
 		if (this.x < this.xtarget) this.x += this.xspd * spdMod;
 		if (this.y > this.ytarget) this.y -= this.yspd * spdMod;
 		if (this.y < this.ytarget) this.y += this.yspd * spdMod;
+		
+		if (Math.pow(Math.pow(this.x - this.xtarget, 2) + Math.pow(this.y - this.ytarget, 2), 0.5) < 3) {
+			this.x = this.xtarget;
+			this.y = this.ytarget;
+		}
 		
 		//checks if arrived at target location
 		if (this.x == this.xtarget && this.y == this.ytarget) this.location = this.target;
@@ -248,6 +265,7 @@ function Room (x, y, w, h, id, squares, system) {
 	this.system = system || null;
 	
 	this.hp = 100;
+	this.hpMax = 100;
 	
 	this.power = 1;
 	this.powerMax = 1;
@@ -528,6 +546,8 @@ function Ship (id, grid, rooms, crew, doors) {
 	this.doors = doors;
 	
 	this.evasion = 0;
+	this.pilot = 0;
+	this.engine = 0;
 }
 
 //updates ship's contents
@@ -552,22 +572,29 @@ Ship.prototype.update = function () {
 		flow();
 	}
 	this.evasion = 0;
-	var pilot = 0;
-	var engine = 0;
+	this.pilot = 0;
+	this.engine = 0;
 	for (r = 0; r < ship.rooms.length; r++) {
-		if (ship.rooms[r].system == "engine") {
-			if (ship.rooms[r].hp > 50) engine = ship.rooms[r].power * 10;
-			else if (ship.rooms[r].hp > 0) engine = ship.rooms[r].power * 5;
-		} else if (ship.rooms[r].system == "pilot") {
-			for (c = 0; c < ship.crew.length; c++) {
-				if (ship.crew[c].location == ship.rooms[r].squares[0]) {
-					pilot = 10 + ship.crew[c].pilot;
+		if (this.rooms[r].system == "engine") {
+			var bonus = 0;
+			for (c = 0; c < this.crew.length; c++) {
+				if (this.crew[c].location == ship.rooms[r].squares[0]) {
+					bonus = this.crew[c].engine * 10;
+				}
+			}
+			if (ship.rooms[r].hp > 50) this.engine = this.rooms[r].power * 10 + bonus;
+			else if (ship.rooms[r].hp > 0) this.engine = this.rooms[r].power * 5 + bonus / 2;
+		} else if (this.rooms[r].system == "pilot") {
+			for (c = 0; c < this.crew.length; c++) {
+				if (this.crew[c].location == this.rooms[r].squares[0]) {
+					if (this.rooms[r].hp > this.rooms[r].hpMax / 2) this.pilot = 10 + ship.crew[c].pilot * 10;
+					else if (this.rooms[r].hp > 0) this.pilot = 5 + this.crew[c].pilot * 5;
 					break;
 				}
 			}
 		}
 	}
-	if (pilot > 0 && engine > 0) this.evasion = pilot + engine;
+	if (this.pilot > 0 && this.engine > 0) this.evasion = this.pilot + this.engine;
 }
 
 //displays entire ship and contents
@@ -622,6 +649,42 @@ Ship.prototype.draw = function () {
 	ctx.font="10px Aldrich";
 	
 	ctx.fillText("Evasion  : "+this.evasion+"%", 11, 83);
+	
+	ctx.strokeStyle = "#faa";
+	if (this.pilot == 0) {
+		ctx.lineWidth = 2;
+		ctx.beginPath();
+    	ctx.arc(110, 79, 7, 0, 2 * Math.PI, false);
+    	ctx.stroke();
+    	for (p = 0; p < 4; p++) {
+			ctx.beginPath();
+			ctx.moveTo(110 + Math.cos(Math.PI * p / 4) * 10, 79 + Math.sin(Math.PI * p / 4) * 10);
+			ctx.lineTo(110 - Math.cos(Math.PI * p / 4) * 10, 79 - Math.sin(Math.PI * p / 4) * 10)
+			ctx.stroke();	
+    	}
+    	if (this.engine == 0) {
+			for (p = 0; p < 5; p ++) {
+				ctx.beginPath();
+				ctx.arc(135 + Math.cos(Math.PI * p / 2.5) * 4, 79 + Math.sin(Math.PI * p / 2.5) * 4, 4, Math.PI * p / 2.5, Math.PI * p / 2.5 + Math.PI, false);
+				ctx.stroke();	
+			}
+			ctx.beginPath();
+			ctx.arc(135, 79, 9, 0, 2 * Math.PI, false);
+			ctx.stroke();
+    	}
+	}
+	else if (this.engine == 0) {
+		ctx.lineWidth = 2;
+		for (p = 0; p < 5; p ++) {
+			ctx.beginPath();
+    		ctx.arc(110 + Math.cos(Math.PI * p / 2.5) * 4, 79 + Math.sin(Math.PI * p / 2.5) * 4, 4, Math.PI * p / 2.5, Math.PI * p / 2.5 + Math.PI, false);
+    		ctx.stroke();	
+		}
+		ctx.lineWidth = 2;
+		ctx.beginPath();
+		ctx.arc(110, 79, 9, 0, 2 * Math.PI, false);
+		ctx.stroke();
+	}
 	
 	ctx.fillText("Flooding : "+Math.floor(100*flood/(10*ship.grid.length))+"%", 11, 103);
 	if (Math.floor(100*flood/(10*ship.grid.length)) >= 50) {
@@ -753,7 +816,7 @@ Ship.prototype.path = function () {
 	//sets up all initial connections to adjacent squares
 	for (s = 0; s < this.grid.length; s++) {
 		for (p = 0; p < this.grid.length; p++) {
-			if (s != p && Math.pow(Math.pow(this.grid[s].x - this.grid[p].x, 2) + Math.pow(this.grid[s].y - this.grid[p].y, 2), 0.5) < 45 && areConnected(this.grid[s], this.grid[p])) {
+			if (s != p && Math.pow(Math.pow(this.grid[s].x - this.grid[p].x, 2) + Math.pow(this.grid[s].y - this.grid[p].y, 2), 0.5) < 57 && areConnected(this.grid[s], this.grid[p])) {
 				this.grid[s].connections[0][this.grid[s].connections[0].length] = this.grid[p].id;
 			}
 		}
@@ -786,6 +849,7 @@ Ship.prototype.path = function () {
 	}
 }
 
+//Design of the kestrel from FTL
 //   A  B  C  D  E  F  G  H  I  J  K  L  M  N  O
 //1                   [J][J]
 //2    [C][C][E][E]   [H][H][L][L]
@@ -794,92 +858,97 @@ Ship.prototype.path = function () {
 //5    [D][D][F][F]   [I][I][M][M]
 //6                   [K][K]
 
-//design of the kestrel from FTL
 var grid = [
-	new Square(210, 140, "a3", "A"), new Square(210, 180, "a4", "A"),
-	new Square(250, 100, "b2", "C"), new Square(250, 140, "b3", "B"), new Square(250, 180, "b4", "B"), new Square(250, 220, "b5", "D"),
-	new Square(290, 100, "c2", "C"), new Square(290, 140, "c3", "B"), new Square(290, 180, "c4", "B"), new Square(290, 220, "c5", "D"),
-	new Square(330, 100, "d2", "E"), new Square(330, 220, "d5", "F"),
-	new Square(370, 100, "e2", "E"), new Square(370, 140, "e3", "G"), new Square(370, 180, "e4", "G"), new Square(370, 220, "e5", "F"),
-	new Square(410, 140, "f3", "G"), new Square(410, 180, "f4", "G"),
-	new Square(450,  60, "g1", "J"), new Square(450, 100, "g2", "H"), new Square(450, 140, "g3", "H"), new Square(450, 180, "g4", "I"), new Square(450, 220, "g5", "I"), new Square(450, 260, "g6", "K"),
-	new Square(490,  60, "h1", "J"), new Square(490, 100, "h2", "H"), new Square(490, 140, "h3", "H"), new Square(490, 180, "h4", "I"), new Square(490, 220, "h5", "I"), new Square(490, 260, "h6", "K"),
-	new Square(530, 100, "i2", "L"), new Square(530, 140, "i3", "L"), new Square(530, 180, "i4", "M"), new Square(530, 220, "i5", "M"),
-	new Square(570, 100, "j2", "L"), new Square(570, 140, "j3", "L"), new Square(570, 180, "j4", "M"), new Square(570, 220, "j5", "M"),
-	new Square(610, 140, "k3", "N"), new Square(610, 180, "k4", "O"),
-	new Square(650, 140, "l3", "N"), new Square(650, 180, "l4", "O"),
-	new Square(690, 140, "m3", "P"), new Square(690, 180, "m4", "P"),
-	new Square(730, 140, "n3", "P"), new Square(730, 180, "n4", "P"),
-	new Square(770, 140, "o3", "Q"), new Square(770, 180, "o4", "Q")
+	new Square(160, 240, "a3", "A"), new Square(160, 280, "a4", "A"),
+	new Square(200, 200, "b2", "C"), new Square(200, 240, "b3", "B"), new Square(200, 280, "b4", "B"), new Square(200, 320, "b5", "D"),
+	new Square(240, 200, "c2", "C"), new Square(240, 240, "c3", "B"), new Square(240, 280, "c4", "B"), new Square(240, 320, "c5", "D"),
+	new Square(280, 200, "d2", "E"), new Square(280, 320, "d5", "F"),
+	new Square(320, 200, "e2", "E"), new Square(320, 240, "e3", "G"), new Square(320, 280, "e4", "G"), new Square(320, 320, "e5", "F"),
+	new Square(360, 240, "f3", "G"), new Square(360, 280, "f4", "G"),
+	new Square(400, 160, "g1", "J"), new Square(400, 200, "g2", "H"), new Square(400, 240, "g3", "H"), new Square(400, 280, "g4", "I"), new Square(400, 320, "g5", "I"), new Square(400, 360, "g6", "K"),
+	new Square(440, 160, "h1", "J"), new Square(440, 200, "h2", "H"), new Square(440, 240, "h3", "H"), new Square(440, 280, "h4", "I"), new Square(440, 320, "h5", "I"), new Square(440, 360, "h6", "K"),
+	new Square(480, 200, "i2", "L"), new Square(480, 240, "i3", "L"), new Square(480, 280, "i4", "M"), new Square(480, 320, "i5", "M"),
+	new Square(520, 200, "j2", "L"), new Square(520, 240, "j3", "L"), new Square(520, 280, "j4", "M"), new Square(520, 320, "j5", "M"),
+	new Square(560, 240, "k3", "N"), new Square(560, 280, "k4", "O"),
+	new Square(600, 240, "l3", "N"), new Square(600, 280, "l4", "O"),
+	new Square(640, 240, "m3", "P"), new Square(640, 280, "m4", "P"),
+	new Square(680, 240, "n3", "P"), new Square(680, 280, "n4", "P"),
+	new Square(720, 240, "o3", "Q"), new Square(720, 280, "o4", "Q")
 ];
 
 var rooms = [
-	new Room(210, 160, 40, 80, "A", ["a3", "a4"]),
-	new Room(270, 160, 80, 80, "B", ["b3", "b4", "c3", "c4"], "engine"),
-	new Room(270, 100, 80, 40, "C", ["b2", "c2"], "drain"),
-	new Room(270, 220, 80, 40, "D", ["b5", "c5"], "teleport"),
-	new Room(350, 100, 80, 40, "E", ["d2", "e2"]),
-	new Room(350, 220, 80, 40, "F", ["d5", "e5"]),
-	new Room(390, 160, 80, 80, "G", ["e3", "e4", "f3", "f4"], "weapons"),
-	new Room(470, 120, 80, 80, "H", ["g2", "g3", "h2", "h3"]),
-	new Room(470, 200, 80, 80, "I", ["g4", "g5", "h4", "h5"], "cloak"),
-	new Room(470,  60, 80, 40, "J", ["g1", "h1"]),
-	new Room(470, 260, 80, 40, "K", ["g6", "h6"]),
-	new Room(550, 120, 80, 80, "L", ["i2", "i3", "j2", "j3"], "medbay"),
-	new Room(550, 200, 80, 80, "M", ["i4", "i5", "j4", "j5"]),
-	new Room(630, 140, 80, 40, "N", ["k3", "l3"], "doors"),
-	new Room(630, 180, 80, 40, "O", ["k4", "l4"], "sonar"),
-	new Room(710, 160, 80, 80, "P", ["m3", "m4", "n3", "n4"], "drones"),
-	new Room(770, 160, 40, 80, "Q", ["o3", "o4"], "pilot")
+	new Room(160, 260, 40, 80, "A", ["a3", "a4"]),
+	new Room(220, 260, 80, 80, "B", ["b3", "b4", "c3", "c4"], "engine"),
+	new Room(220, 200, 80, 40, "C", ["b2", "c2"], "drain"),
+	new Room(220, 320, 80, 40, "D", ["b5", "c5"], "teleport"),
+	new Room(300, 200, 80, 40, "E", ["d2", "e2"]),
+	new Room(300, 320, 80, 40, "F", ["d5", "e5"]),
+	new Room(340, 260, 80, 80, "G", ["e3", "e4", "f3", "f4"], "weapons"),
+	new Room(420, 220, 80, 80, "H", ["g2", "g3", "h2", "h3"]),
+	new Room(420, 300, 80, 80, "I", ["g4", "g5", "h4", "h5"], "cloak"),
+	new Room(420, 160, 80, 40, "J", ["g1", "h1"]),
+	new Room(420, 360, 80, 40, "K", ["g6", "h6"]),
+	new Room(500, 220, 80, 80, "L", ["i2", "i3", "j2", "j3"], "medbay"),
+	new Room(500, 300, 80, 80, "M", ["i4", "i5", "j4", "j5"]),
+	new Room(580, 240, 80, 40, "N", ["k3", "l3"], "doors"),
+	new Room(580, 280, 80, 40, "O", ["k4", "l4"], "sonar"),
+	new Room(660, 260, 80, 80, "P", ["m3", "m4", "n3", "n4"], "drones"),
+	new Room(720, 260, 40, 80, "Q", ["o3", "o4"], "pilot")
 ];
 
 var doors = [
-	new Door(230, 140, "v", ["a3", "b3"]), new Door(230, 180, "v", ["a4", "b4"]),
-	new Door(290, 120, "h", ["c2", "c3"]), new Door(290, 200, "h", ["c4", "c5"]),
-	new Door(310, 100, "v", ["c2", "d2"]), new Door(310, 220, "v", ["c5", "d5"]),
-	new Door(370, 120, "h", ["e2", "e3"]), new Door(370, 200, "h", ["e4", "e5"]),
-	new Door(430, 140, "v", ["f3", "g3"]), new Door(430, 180, "v", ["f4", "g4"]),
-	new Door(490,  80, "h", ["h1", "h2"]), new Door(490, 240, "h", ["h5", "h6"]),
-	new Door(510, 100, "v", ["h2", "i2"]), new Door(510, 220, "v", ["h5", "i5"]),
-	new Door(530, 160, "h", ["i3", "i4"]),
-	new Door(590, 140, "v", ["j3", "k3"]), new Door(590, 180, "v", ["j4", "k4"]),
-	new Door(670, 140, "v", ["l3", "m3"]), new Door(670, 180, "v", ["l4", "m4"]),
-	new Door(750, 180, "v", ["n4", "o4"]),
-	new Door(190, 140, "v", ["a3", null]), new Door(190, 180, "v", ["a4", null]),
-	new Door(450,  40, "h", ["g1", null]), new Door(490,  40, "h", ["h1", null]),
-	new Door(450, 280, "h", ["g6", null]), new Door(490, 280, "h", ["h6", null])
+	new Door(180, 240, "v", ["a3", "b3"]), new Door(180, 280, "v", ["a4", "b4"]),
+	new Door(240, 220, "h", ["c2", "c3"]), new Door(240, 300, "h", ["c4", "c5"]),
+	new Door(260, 200, "v", ["c2", "d2"]), new Door(260, 320, "v", ["c5", "d5"]),
+	new Door(320, 220, "h", ["e2", "e3"]), new Door(320, 300, "h", ["e4", "e5"]),
+	new Door(380, 240, "v", ["f3", "g3"]), new Door(380, 280, "v", ["f4", "g4"]),
+	new Door(440, 180, "h", ["h1", "h2"]), new Door(440, 340, "h", ["h5", "h6"]),
+	new Door(460, 200, "v", ["h2", "i2"]), new Door(460, 320, "v", ["h5", "i5"]),
+	new Door(480, 260, "h", ["i3", "i4"]),
+	new Door(540, 240, "v", ["j3", "k3"]), new Door(540, 280, "v", ["j4", "k4"]),
+	new Door(620, 240, "v", ["l3", "m3"]), new Door(620, 280, "v", ["l4", "m4"]),
+	new Door(700, 280, "v", ["n4", "o4"]),
+	new Door(140, 240, "v", ["a3", null]), new Door(140, 280, "v", ["a4", null]),
+	new Door(400, 140, "h", ["g1", null]), new Door(440, 140, "h", ["h1", null]),
+	new Door(400, 380, "h", ["g6", null]), new Door(440, 380, "h", ["h6", null])
 ];
 
-var ship = new Ship("test", grid, rooms, [new CrewMember(770, 140, "o3", "cyan"), new CrewMember(370, 140, "e3"), new CrewMember(250, 140, "b3", "yellow"), new CrewMember(610, 180, "k4", "magenta")], doors);
+var ship = new Ship("test", grid, rooms, [new CrewMember(720, 240, "o3", "cyan"), new CrewMember(320, 240, "e3"), new CrewMember(200, 240, "b3", "yellow"), new CrewMember(560, 280, "k4", "magenta", "Matt")], doors);
 ship.path();
 
 
 //BUBBLES
 //bubbles for aesthetics
 function Bubble () {
-	this.x = Math.floor(Math.random() * 1220);
+	this.x = Math.floor(Math.random() * 1200);
 	this.y = Math.floor(Math.random() * 600);
-	this.v = Math.round(Math.random() + Math.random() + Math.random());
+	
+	this.vx = Math.cos(Math.atan2(300 - this.y, 600 - this.x)) * 2 + 1;
+	this.vy = Math.sin(Math.atan2(300 - this.y, 600 - this.x)) * 2;
+	
 	this.z = Math.floor(Math.random() * 40);
-	this.r = Math.round(Math.pow(Math.random(), 2)) + 1;
+	this.r = Math.round(Math.pow(Math.random(), 2)) + 3;
 }
 
 Bubble.prototype.update = function () {
-	this.x -= this.v;
+	this.x -= this.vx;
+	this.y -= this.vy;
 	
 	this.z++;
 	if (this.z > 40) {
 		this.x = Math.floor(Math.random() * 1200);
 		this.y = Math.floor(Math.random() * 600);
+		this.vx = Math.cos(Math.atan2(300 - this.y, 600 - this.x)) * 2 + 1;
+		this.vy = Math.sin(Math.atan2(300 - this.y, 600 - this.x)) * 2;
 		this.z = 0;
-		this.r = Math.floor(Math.random() * 3) + 1;
+		this.r = Math.floor(Math.random() * 3) + 3;
 	}
 }
 
 Bubble.prototype.draw = function () {
-	ctx.fillStyle = "rgba(255, 255, 255, "+(Math.sin(this.z * Math.PI / 40) / 6)+")";
+	ctx.fillStyle = "rgba(255, 255, 255, "+(Math.sin(this.z * Math.PI / 40) / 4)+")";
 	ctx.beginPath();
-	ctx.arc(this.x, this.y, this.r+(Math.sin(this.z * Math.PI / 80) * 2), 0, Math.PI * 2, false);
+	ctx.arc(this.x, this.y, Math.max(this.r - (Math.cos(this.z * Math.PI / 80) * 2),0), 0, Math.PI * 2, false);
 	ctx.fill();
 }
 
@@ -897,8 +966,15 @@ function draw() {
 	ctx.fillStyle = "#005";
 	ctx.fillRect(0, 0, 1200, 600);
 	
-	ship.draw();
+	ctx.fillStyle = "rgba(0,0,0,0.01)";
+	for (i = 0; i < 100; i+=1.5) {
+		ctx.beginPath();
+		ctx.ellipse(600, 300, i*6, i*3, 0, 0, Math.PI*2);
+		ctx.fill();
+	}
+	
 	if (frame % 5 == 0) ship.update();
+	ship.draw();
 	
 	/*ctx.globalAlpha = 0.25;
     ctx.drawImage(kestrelImg, 63, -115, kestrelImg.width * 1.15, kestrelImg.height * 1.15);
@@ -973,6 +1049,7 @@ function draw() {
 	frame++;
 }
 
+
 //IO
 document.onmousemove = function(e) {
     e = window.event || e;
@@ -992,8 +1069,8 @@ document.onmousedown = function(e) {
 	
 	if (mode == "normal") {
 		for (c = 0; c < ship.crew.length; c++) {
-			//																																													ctx.fillRect(7, 135 + 30*c, 84, 28);
-			if ((mouseX > ship.crew[c].x - ship.crew[c].w / 2 && mouseX < ship.crew[c].x + ship.crew[c].w / 2 && mouseY > ship.crew[c].y - ship.crew[c].h / 2 && mouseY < ship.crew[c].y + ship.crew[c].h / 2) || (mouseX > 7 && mouseX < 91 && mouseY > 135 + 30*c && mouseY < 163 + 30*c)) {
+			//																																													ctx.fillRect(7, 155 + 30*c, 84, 28);
+			if ((mouseX > ship.crew[c].x - ship.crew[c].w / 2 && mouseX < ship.crew[c].x + ship.crew[c].w / 2 && mouseY > ship.crew[c].y - ship.crew[c].h / 2 && mouseY < ship.crew[c].y + ship.crew[c].h / 2) || (mouseX > 7 && mouseX < 91 && mouseY > 155 + 30*c && mouseY < 183 + 30*c)) {
 				mode = "move";
 				selected = c;
 				ship.crew[c].auto = false;
@@ -1090,6 +1167,18 @@ document.onkeydown = function(e) {
     
     if (key === 32) paused = !paused;
     else if (key ===16) mode = "water";
+    else if (key === 188) {
+    	for (d = 0; d < ship.doors.length; d++) {
+    		ship.doors[d].open = true;
+    		ship.doors[d].held = true;
+    	}
+    }
+    else if (key === 190) {
+    	for (d = 0; d < ship.doors.length; d++) {
+    		ship.doors[d].open = false;
+    		ship.doors[d].held = false;
+    	}
+    }
 }
 
 document.onkeyup = function(e) {
